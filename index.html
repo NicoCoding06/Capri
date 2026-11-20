@@ -359,33 +359,6 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
 .gcard .logo svg{animation:breatheB 4.5s ease-in-out infinite}
 @keyframes breatheB{50%{filter:drop-shadow(0 0 6px #4d8dff) drop-shadow(0 0 22px #4d8dff)}}
 .sync.ok::before{animation:pulse 3s ease-in-out infinite;--c:var(--fn)}
-/* watchlist */
-.wtgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(46%,180px),1fr));gap:14px}
-.wtgrid .skel{aspect-ratio:2/3;height:auto}
-.wt{--c:var(--wt);--s:var(--u1);position:relative;display:block;padding:0;border:1px solid color-mix(in srgb,var(--c) 32%,var(--line));border-radius:18px;overflow:hidden;background:var(--p1);cursor:pointer;text-align:left;font:inherit;color:#fff;aspect-ratio:2/3;transition:transform .2s,border-color .15s,box-shadow .2s;width:100%}
-.wt:hover{transform:translateY(-3px);border-color:var(--c);box-shadow:0 20px 50px -24px var(--c)}
-.wt-img{position:absolute;inset:0;background:radial-gradient(120% 90% at 30% 10%,color-mix(in srgb,var(--c) 45%,#000),#0b0b0d 72%)}
-.wt-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
-.wt-ph{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;font-weight:700;color:color-mix(in srgb,var(--c) 60%,#fff)}
-.wt-type{position:absolute;z-index:2;top:8px;left:8px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.72);border:1px solid var(--c)}
-.wt-b{position:absolute;z-index:2;left:0;right:0;bottom:0;padding:46px 12px 12px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.88) 48%);display:flex;flex-direction:column;gap:3px}
-.wt-b b{font-size:15px;line-height:1.2;overflow-wrap:anywhere}
-.wt-b small{font-size:12px;color:#cfcfd8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wt-st{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--s)}.wt-st i{width:7px;height:7px;border-radius:50%;background:var(--s);box-shadow:0 0 8px var(--s)}
-.wt-bar{height:4px;border-radius:9px;background:rgba(255,255,255,.18);overflow:hidden;margin-top:4px}.wt-bar i{display:block;height:100%;background:var(--c);box-shadow:0 0 8px var(--c)}
-.stars{color:var(--u2);font-size:13px;letter-spacing:1px}.stars i{color:rgba(255,255,255,.2);font-style:normal}
-.wt-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}.wt-row .wt{border-radius:14px}.wt-row .wt-b{padding:28px 8px 8px}.wt-row .wt-b b{font-size:12px}.wt-row .wt-ph{font-size:34px}
-.wtm{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:start}
-.wtm-cover{aspect-ratio:2/3;border-radius:16px;overflow:hidden;background:var(--p2);border:1px solid var(--line);display:grid;place-items:center;text-align:center;color:var(--mut);box-shadow:0 20px 50px -26px var(--acc)}
-.wtm-cover img{width:100%;height:100%;object-fit:cover}.wtm-cover svg{width:36px;height:36px;display:block;margin:0 auto 6px;color:var(--acc)}.wtm-cover small{font-size:12px}
-.covers{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;max-height:340px;overflow:auto}
-.covers:empty{display:none}
-.cvr{position:relative;padding:0;border:2px solid transparent;border-radius:12px;overflow:hidden;background:var(--p2);aspect-ratio:2/3;cursor:pointer}
-.cvr img{width:100%;height:100%;object-fit:cover;display:block}
-.cvr span{position:absolute;left:0;right:0;bottom:0;padding:16px 6px 5px;font-size:11px;line-height:1.2;color:#fff;background:linear-gradient(180deg,transparent,rgba(0,0,0,.88));text-align:left}
-.cvr.on{border-color:var(--acc);box-shadow:0 0 18px -2px var(--acc)}
-.rate{display:flex;gap:0}.rate button{background:none;border:0;font-size:26px;color:rgba(255,255,255,.18);cursor:pointer;padding:4px 3px;min-height:44px}.rate button.on{color:var(--u2);text-shadow:0 0 12px var(--u2)}
-input[type=range]{accent-color:var(--acc);padding:0;min-height:44px;background:none;border:0;box-shadow:none!important}
 /* notifiche */
 .notif-prev{background:rgba(44,44,50,.88);border-radius:20px;padding:12px 14px;border:1px solid rgba(255,255,255,.09);box-shadow:0 18px 40px -20px rgba(0,0,0,.9)}
 .np-app{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);margin-bottom:6px}.np-app svg{width:22px;height:22px;padding:3px;border-radius:6px;background:#08080a;color:var(--tk)}.np-app small{margin-left:auto}
@@ -508,7 +481,6 @@ input[type=range]{accent-color:var(--acc);padding:0;min-height:44px;background:n
     <a href="#oggi" data-nav="oggi"><svg><use href="#i-home"/></svg><span>Oggi</span></a>
     <a href="#ticket" data-nav="ticket"><svg><use href="#i-ticket"/></svg><span>Ticket</span></a>
     <a href="#wishlist" data-nav="wishlist"><svg><use href="#i-star"/></svg><span>Wishlist</span></a>
-    <a href="#watchlist" data-nav="watchlist"><svg><use href="#i-play"/></svg><span>Watchlist</span></a>
     <a href="#finanze" data-nav="finanze"><svg><use href="#i-wallet"/></svg><span>Finanze</span></a>
     <a href="#note" data-nav="note"><svg><use href="#i-note"/></svg><span>Note</span></a>
   </nav>
@@ -555,20 +527,6 @@ input[type=range]{accent-color:var(--acc);padding:0;min-height:44px;background:n
       <select id="w-sort" aria-label="Ordina"><option value="prio">Per priorità</option><option value="pd">Prezzo più alto</option><option value="pa">Prezzo più basso</option><option value="var">Variazione prezzo</option><option value="new">Più recenti</option></select>
     </div>
     <div class="wgrid" id="w-grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
-  </section>
-  <section class="view" id="v-watchlist" hidden>
-    <div class="hero">
-      <svg class="hero-art" viewBox="0 0 24 24"><use href="#i-play"/></svg>
-      <div class="hero-top"><div><p class="kicker" data-today></p><h1>Watchlist</h1><p class="sum" id="wt-sum">&nbsp;</p></div>
-        <div class="right"><button class="btn pri" id="wt-new"><svg><use href="#i-plus"/></svg>Aggiungi</button></div></div>
-      <div class="stats" id="wt-stats"></div>
-    </div>
-    <div class="filters">
-      <div class="seg" id="wt-status"><button data-v="corso" class="on">In corso</button><button data-v="da">Da iniziare</button><button data-v="finito">Finiti</button><button data-v="tutti">Tutti</button></div>
-      <label class="srch"><svg><use href="#i-search"/></svg><input type="search" id="wt-q" placeholder="Cerca nella watchlist" aria-label="Cerca nella watchlist"></label>
-      <select id="wt-type" aria-label="Tipo"></select>
-    </div>
-    <div class="wtgrid" id="wt-grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
   </section>
   <section class="view" id="v-finanze" hidden>
     <div class="hero">
@@ -2080,13 +2038,10 @@ function renderOggi(){
   const cWish=card('var(--wl)','star',deals.length?'Occasioni in wishlist':'Wishlist',['#wishlist','Apri'],show.length?`<div class="rows">${show.map(w=>{const dl=wDelta(w);return`<button class="rowi" data-oa="${A(()=>{location.hash='#wishlist';})}" style="--c:${esc((catOf('wcats',w.cat)||{}).c||'#9a9aa3')}"><span class="dot"></span><span class="t">${esc(w.name)}</span>${dl!==null&&dl!==0?`<span class="s" style="color:${dl<0?'var(--u1)':'var(--u4)'}">${dl<0?'▼':'▲'} ${Math.abs(dl*100).toFixed(0)}%</span>`:''}<span class="a">${eur(priceOf(w))}</span></button>`;}).join('')}</div>`:`<p class="mini">La wishlist è vuota.</p>`);
   const pins=S.notes.filter(n=>n.pin).sort((a,b)=>(b.upd||0)-(a.upd||0)).slice(0,3);
   const cNotes=card('var(--nt)','note','Note fissate',['#note','Tutte'],pins.length?`<div class="onotes">${pins.map(n=>nCard(n,true)).join('')}</div>`:`<p class="mini">Fissa una nota per vederla qui.</p><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>noteModal(null))}">${ico('plus')}Nuova nota</button>`);
-  const curW=S.watch.filter(x=>x.status==='corso').sort((a,b)=>(b.upd||0)-(a.upd||0)).slice(0,6);
-  const cWatch=card('var(--wt)','play','In corso',['#watchlist','Watchlist'],curW.length?`<div class="wt-row">${curW.map(x=>wtCard(x,true)).join('')}</div>`:`<p class="mini">Aggiungi cosa stai giocando, guardando o leggendo: la copertina la trova Capri.</p><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>watchModal(null))}">${ico('plus')}Aggiungi alla watchlist</button>`);
-  $('#o-dash').innerHTML=cTodo+cMoney+cNext+cWatch+cWish+cNotes;
+  $('#o-dash').innerHTML=cTodo+cMoney+cNext+cWish+cNotes;
 }
 $('#v-oggi').addEventListener('click',e=>{
   if(e.target.closest('.onotes')){onNoteClick(e);return;}
-  const wb=e.target.closest('[data-wid]');if(wb){const x=S.watch.find(y=>y.id===wb.dataset.wid);if(x)watchModal(x);return;}
   const b=e.target.closest('[data-oa]');if(b){const f=OACT[+b.dataset.oa];if(f)f();return;}
   const q=e.target.closest('[data-quick]');if(q)quickAdd(q.dataset.quick);
 });
@@ -2100,9 +2055,8 @@ $('#add-btn').onclick=()=>{
     <button style="--c:var(--nt)" data-q="lista">${ico('note')}Lista<span>Spesa, cose da comprare…</span></button>
     <button style="--c:var(--og)" data-q="abb">${ico('repeat')}Abbonamento<span>O una scadenza da ricordare</span></button>
     <button style="--c:var(--wl)" data-q="wish">${ico('star')}Desiderio<span>Da aggiungere alla wishlist</span></button>
-    <button style="--c:var(--wt)" data-q="watch">${ico('play')}Watchlist<span>Gioco, serie, film, libro…</span></button>
   </div>`);
-  DLG.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const k=b.dataset.q;closeModal();if(k==='wish')wishModal(null);else if(k==='watch')watchModal(null);else quickAdd(k);});
+  DLG.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const k=b.dataset.q;closeModal();if(k==='wish')wishModal(null);else quickAdd(k);});
 };
 
 /* ================= NOTIFICHE ================= */
@@ -2209,127 +2163,6 @@ function notifModal(){
   const off=$('#nt-off');if(off)off.onclick=async()=>{if(!armed(off))return;await disableNotif();closeModal();toast('Notifiche disattivate su questo dispositivo','ok');renderOggi();};
 }
 
-/* ================= WATCHLIST ================= */
-const WT={game:{n:'Gioco',v:'Sto giocando',c:'#ff4fd8'},tv:{n:'Serie TV',v:'Sto guardando',c:'#4d8dff'},movie:{n:'Film',v:'Da vedere',c:'#ffb547'},book:{n:'Libro',v:'Sto leggendo',c:'#1fe08f'},anime:{n:'Anime',v:'Sto guardando',c:'#ff2d55'},manga:{n:'Manga e fumetti',v:'Sto leggendo',c:'#22d3ee'}};
-const WS={corso:{n:'In corso',c:'var(--u1)'},da:{n:'Da iniziare',c:'var(--tk)'},pausa:{n:'In pausa',c:'var(--u2)'},finito:{n:'Finito',c:'var(--wt)'},mollato:{n:'Abbandonato',c:'var(--dim)'}};
-const wsLabel=(x)=>x.status==='corso'?(WT[x.type]||WT.game).v.replace('Da vedere','Sto guardando'):WS[x.status||'da'].n;
-S.watch=[];S.wf2={status:'corso',type:'',q:''};
-const enc=encodeURIComponent;
-async function jget(u){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),9000);try{const r=await fetch(u,{headers:{Accept:'application/json'},signal:ctl.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json();}finally{clearTimeout(t);}}
-function jsonp(url){return new Promise((res,rej)=>{const cb='capri_cb_'+Math.random().toString(36).slice(2);const s=document.createElement('script');const done=()=>{clearTimeout(tm);try{delete window[cb];}catch(e){window[cb]=undefined;}s.remove();};const tm=setTimeout(()=>{done();rej(new Error('timeout'));},9000);window[cb]=d=>{done();res(d);};s.onerror=()=>{done();rej(new Error('rete'));};s.src=url+(url.includes('?')?'&':'?')+'callback='+cb;document.head.append(s);});}
-const https=u=>u?String(u).replace(/^http:\/\//,'https://'):'';
-async function wiki(q,suffix){
-  const d=await jget(`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${enc(q+(suffix?' '+suffix:''))}&gsrlimit=8&prop=pageimages&piprop=thumbnail&pithumbsize=600`);
-  const pages=Object.values((d.query&&d.query.pages)||{}).sort((a,b)=>(a.index||0)-(b.index||0));
-  return pages.filter(p=>p.thumbnail&&p.thumbnail.source).map(p=>({title:p.title.replace(/\s*\((video ?game|novel|film|TV series|manga|anime)[^)]*\)$/i,''),year:'',by:'',cover:p.thumbnail.source,link:'https://en.wikipedia.org/wiki/'+enc(p.title.replace(/ /g,'_'))}));
-}
-const SEARCH={
-  tv:async q=>(await jget('https://api.tvmaze.com/search/shows?q='+enc(q))).filter(x=>x.show).slice(0,10).map(x=>({title:x.show.name,year:(x.show.premiered||'').slice(0,4),by:(x.show.network&&x.show.network.name)||(x.show.webChannel&&x.show.webChannel.name)||'',cover:https(x.show.image&&(x.show.image.original||x.show.image.medium)),link:x.show.url})),
-  movie:async q=>{const d=await jsonp(`https://itunes.apple.com/search?term=${enc(q)}&media=movie&entity=movie&country=it&limit=12`);return(d.results||[]).map(x=>({title:x.trackName,year:(x.releaseDate||'').slice(0,4),by:x.artistName||'',cover:https(x.artworkUrl100?x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x900bb.'):''),link:x.trackViewUrl}));},
-  book:async q=>{const d=await jget(`https://openlibrary.org/search.json?q=${enc(q)}&limit=12&fields=title,author_name,first_publish_year,cover_i,key`);let r=(d.docs||[]).filter(x=>x.cover_i).map(x=>({title:x.title,year:String(x.first_publish_year||''),by:(x.author_name||[])[0]||'',cover:`https://covers.openlibrary.org/b/id/${x.cover_i}-L.jpg`,link:'https://openlibrary.org'+x.key}));
-    if(r.length<4){try{const g=await jget(`https://www.googleapis.com/books/v1/volumes?q=${enc(q)}&maxResults=10`);r=r.concat((g.items||[]).filter(i=>i.volumeInfo&&i.volumeInfo.imageLinks).map(i=>({title:i.volumeInfo.title,year:(i.volumeInfo.publishedDate||'').slice(0,4),by:(i.volumeInfo.authors||[])[0]||'',cover:https(i.volumeInfo.imageLinks.thumbnail).replace('&edge=curl','').replace('zoom=1','zoom=2'),link:i.volumeInfo.infoLink})));}catch(e){}}
-    return r;},
-  anime:async q=>((await jget(`https://api.jikan.moe/v4/anime?q=${enc(q)}&limit=10&sfw=true`)).data||[]).map(x=>({title:x.title_english||x.title,year:String(x.year||((x.aired&&x.aired.from)||'').slice(0,4)||''),by:((x.studios||[])[0]||{}).name||'',cover:(x.images&&((x.images.webp&&x.images.webp.large_image_url)||(x.images.jpg&&x.images.jpg.large_image_url)))||'',link:x.url,total:x.episodes||null})),
-  manga:async q=>((await jget(`https://api.jikan.moe/v4/manga?q=${enc(q)}&limit=10&sfw=true`)).data||[]).map(x=>({title:x.title_english||x.title,year:(((x.published&&x.published.from)||'')).slice(0,4),by:(((x.authors||[])[0]||{}).name||'').replace(/^(.*), (.*)$/,'$2 $1'),cover:(x.images&&((x.images.webp&&x.images.webp.large_image_url)||(x.images.jpg&&x.images.jpg.large_image_url)))||'',link:x.url,total:x.chapters||null})),
-  game:async q=>{let r=await wiki(q,'video game');if(r.length<2)r=r.concat(await wiki(q,''));return r;},
-};
-async function searchCovers(type,q){
-  let r=[];try{r=await (SEARCH[type]||SEARCH.game)(q);}catch(e){}
-  if(!r.filter(x=>x.cover).length){try{r=r.concat(await wiki(q,{tv:'TV series',movie:'film',book:'novel',anime:'anime',manga:'manga',game:''}[type]||''));}catch(e){}}
-  const seen=new Set();return r.filter(x=>x.cover&&!seen.has(x.cover)&&seen.add(x.cover)).slice(0,12);
-}
-const coverOf=x=>x.img?surl(x.img):x.cover||'';
-function wFiltered2(){
-  const f=S.wf2;let a=S.watch.slice();
-  if(f.status!=='tutti')a=a.filter(x=>(x.status||'da')===f.status);
-  if(f.type)a=a.filter(x=>x.type===f.type);
-  if(f.q){const q=f.q.toLowerCase();a=a.filter(x=>[x.title,x.by,x.note,x.platform].join(' ').toLowerCase().includes(q));}
-  const ord={corso:0,pausa:1,da:2,finito:3,mollato:4};
-  return a.sort((x,y)=>(ord[x.status||'da']-ord[y.status||'da'])||(y.upd||0)-(x.upd||0));
-}
-function stars(n){n=+n||0;return n?'<span class="stars">'+'★'.repeat(n)+'<i>'+'★'.repeat(5-n)+'</i></span>':'';}
-function wtCard(x,mini){
-  const t=WT[x.type]||WT.game,st=WS[x.status||'da'],cv=coverOf(x);
-  return`<button class="wt" data-wid="${esc(x.id)}" style="--c:${t.c};--s:${st.c}" type="button">
-    <span class="wt-img">${cv?`<img src="${esc(cv)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}<span class="wt-ph">${esc(String(x.title||'?').slice(0,1).toUpperCase())}</span></span>
-    ${mini?'':`<span class="wt-type">${esc(t.n)}</span>`}
-    <span class="wt-b"><span class="wt-st"><i></i>${esc(wsLabel(x))}</span><b>${esc(x.title||'Senza titolo')}</b>${mini?'':`<small>${esc([x.year,x.by,x.platform].filter(Boolean).join(' · '))}</small>`}${x.progress&&!mini?`<small class="wt-pr">${esc(x.progress)}</small>`:''}${+x.pct?`<span class="wt-bar"><i style="width:${clamp(+x.pct,0,100)}%"></i></span>`:''}${mini?'':stars(x.rating)}</span>
-  </button>`;
-}
-function renderWatch(){
-  const all=S.watch,inC=all.filter(x=>x.status==='corso'),todo=all.filter(x=>(x.status||'da')==='da'),y=String(new Date().getFullYear());
-  const fin=all.filter(x=>x.status==='finito'&&String(x.finished||'').startsWith(y));
-  $('#wt-stats').innerHTML=[[inC.length,'In corso','var(--u1)'],[todo.length,'Da iniziare','var(--tk)'],[fin.length,'Finiti nel '+y,'var(--wt)'],[all.length,'In totale','#fff']].map(([n,l,c])=>`<div class="stat static" style="--c:${c}"><b>${n}</b><span>${l}</span></div>`).join('');
-  const by=k=>inC.filter(x=>x.type===k).map(x=>x.title);
-  const bits=[];const g=by('game'),v=[...by('tv'),...by('movie'),...by('anime')],l=[...by('book'),...by('manga')];
-  const bj=a=>a.slice(0,2).map(t=>'<b>'+esc(t)+'</b>').join(' e ')+(a.length>2?` e altri ${a.length-2}`:'');
-  if(g.length)bits.push('giocando a '+bj(g));if(v.length)bits.push('guardando '+bj(v));if(l.length)bits.push('leggendo '+bj(l));
-  $('#wt-sum').innerHTML=bits.length?'Stai '+bits.join(', ').replace(/, ([^,]*)$/,' e $1')+'.':'Giochi, serie, film, libri, anime e manga: scrivi il titolo e la copertina la trova Capri.';
-  if(!S.ready)return;
-  const list=wFiltered2();
-  $('#wt-grid').innerHTML=list.length?list.map(x=>wtCard(x)).join(''):(all.length?`<div class="empty">${ico('search')}<b>Niente qui</b>Cambia i filtri qui sopra.</div>`:`<div class="empty">${ico('play')}<b>La watchlist è vuota</b>Aggiungi cosa stai giocando, guardando o leggendo: scrivi il titolo e scegli la copertina.</div>`);
-}
-$('#wt-grid').addEventListener('click',e=>{const b=e.target.closest('[data-wid]');if(!b)return;const x=S.watch.find(y=>y.id===b.dataset.wid);if(x)watchModal(x);});
-$('#wt-new').onclick=()=>watchModal(null);
-$('#wt-status').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.wf2.status=b.dataset.v;$$('#wt-status button').forEach(x=>x.classList.toggle('on',x===b));renderWatch();});
-$('#wt-type').innerHTML='<option value="">Tutti i tipi</option>'+Object.entries(WT).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
-$('#wt-type').addEventListener('change',e=>{S.wf2.type=e.target.value;renderWatch();});
-$('#wt-q').addEventListener('input',e=>{S.wf2.q=e.target.value.trim();renderWatch();});
-function watchModal(x){
-  const isNew=!x;const d=x?clone(x):{id:uid(),title:'',type:S.wf2.type||'game',status:'corso',cover:'',year:'',by:'',link:'',progress:'',pct:0,rating:0,platform:'',note:'',started:isoDay(),finished:'',created:Date.now()};
-  const ed={res:[],busy:0,seq:0};
-  openModal(`<div class="mh"><h2>${isNew?'Aggiungi alla watchlist':'Watchlist'}</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
-  <div class="wtm">
-    <div class="wtm-cover" id="wm-cv"></div>
-    <form class="form" id="wmf" style="grid-template-columns:repeat(2,minmax(0,1fr))" autocomplete="off" onsubmit="return false">
-      <div class="f full"><span>Tipo</span><div class="chips">${Object.entries(WT).map(([k,v])=>`<label style="--c:${v.c}"><input type="radio" name="type" value="${k}" ${d.type===k?'checked':''}><b>${v.n}</b></label>`).join('')}</div></div>
-      <label class="f full"><span>Titolo</span><input name="title" value="${esc(d.title)}" maxlength="160" placeholder="Es. Elden Ring, Severance, Dune…" ${isNew?'autofocus':''} autocomplete="off"></label>
-      <label class="f"><span>Stato</span><select name="status">${Object.entries(WS).map(([k,v])=>`<option value="${k}" ${d.status===k?'selected':''}>${v.n}</option>`).join('')}</select></label>
-      <label class="f"><span>Piattaforma / dove</span><input name="platform" value="${esc(d.platform||'')}" maxlength="40" placeholder="PS5, Netflix, Kindle…"></label>
-      <label class="f"><span>A che punto sei</span><input name="progress" value="${esc(d.progress||'')}" maxlength="60" placeholder="Stagione 2 ep. 4 · pag. 120…"></label>
-      <label class="f"><span>Avanzamento ${'<b id="wm-pctv">'+(+d.pct||0)+'%</b>'}</span><input type="range" name="pct" min="0" max="100" step="5" value="${+d.pct||0}"></label>
-      <div class="f"><span>Voto</span><div class="rate" id="wm-rate">${[1,2,3,4,5].map(i=>`<button type="button" data-r="${i}" class="${i<=(+d.rating||0)?'on':''}" aria-label="${i} stelle">★</button>`).join('')}</div></div>
-      <label class="f"><span>Finito il</span><input type="date" name="finished" value="${esc(d.finished||'')}"></label>
-      <label class="f full"><span>Note</span><textarea name="note" rows="2" placeholder="Impressioni, con chi lo guardi, consigli…">${esc(d.note||'')}</textarea></label>
-    </form>
-  </div>
-  <div class="sec"><div class="sh"><h3>Copertina</h3><span class="mini" id="wm-msg"></span><label class="btn ghost sm"><input type="file" accept="image/*" hidden id="wm-file">Carica foto</label></div>
-    <div class="covers" id="wm-res"></div>
-    <div style="display:flex;gap:8px;margin-top:10px"><input id="wm-url" placeholder="…oppure incolla il link di un'immagine" value=""><button class="btn sm ghost" id="wm-urlok" type="button">Usa</button></div></div>
-  <div class="mf">${isNew?'':'<button class="btn danger" id="wm-del" type="button">Elimina</button>'}<span class="sp"></span><button class="btn ghost" data-close type="button">Annulla</button><button class="btn pri" id="wm-ok" type="button">${isNew?'Aggiungi':'Salva'}</button></div>`,{wide:true});
-  const drawCover=()=>{const cv=coverOf(d);$('#wm-cv').innerHTML=cv?`<img src="${esc(cv)}" alt="" referrerpolicy="no-referrer">`:`<span>${ico('play')}<small>La copertina apparirà qui</small></span>`;};
-  const drawRes=()=>{$('#wm-res').innerHTML=ed.res.map((r,i)=>`<button type="button" class="cvr${!d.img&&d.cover===r.cover?' on':''}" data-ri="${i}" title="${esc(r.title)}"><img src="${esc(r.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"><span>${esc(r.title)}${r.year?` · ${esc(r.year)}`:''}</span></button>`).join('');};
-  S.redraw=drawCover;drawCover();
-  const typeNow=()=>(DLG.querySelector('[name=type]:checked')||{}).value||'game';
-  let tmr=null;
-  const runSearch=async(auto)=>{
-    const q=$('#wmf [name=title]').value.trim();if(q.length<2){$('#wm-msg').textContent='';ed.res=[];drawRes();return;}
-    const my=++ed.seq;$('#wm-msg').textContent='Cerco le copertine…';
-    const r=await searchCovers(typeNow(),q);if(my!==ed.seq||!$('#wm-res'))return;
-    ed.res=r;drawRes();$('#wm-msg').textContent=r.length?'Tocca quella giusta':'Nessuna copertina trovata: prova un titolo diverso o caricane una';
-    if(r.length&&!d.img&&(!d.cover||auto==='first')){const f=r[0];d.cover=f.cover;if(!d.year)d.year=f.year;if(!d.by)d.by=f.by;if(!d.link)d.link=f.link;drawCover();drawRes();}
-  };
-  $('#wmf [name=title]').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>runSearch(isNew&&!d.img?'first':''),650);});
-  $$('#wmf [name=type]').forEach(r=>r.addEventListener('change',()=>{if($('#wmf [name=title]').value.trim())runSearch(isNew&&!d.img?'first':'');}));
-  if(!isNew&&d.title)runSearch('');
-  $('#wm-res').addEventListener('click',e=>{const b=e.target.closest('[data-ri]');if(!b)return;const r=ed.res[+b.dataset.ri];if(!r)return;if(d.img){ed.oldImg=ed.oldImg||d.img;d.img=null;}d.cover=r.cover;d.year=r.year||d.year;d.by=r.by||d.by;d.link=r.link||d.link;drawCover();drawRes();});
-  $('#wm-urlok').onclick=()=>{const u=$('#wm-url').value.trim();if(!/^https?:\/\//i.test(u)){toast('Incolla un link che inizi con https://','err');return;}if(d.img){ed.oldImg=ed.oldImg||d.img;d.img=null;}d.cover=u;drawCover();drawRes();};
-  $('#wm-file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;ed.busy=1;$('#wm-msg').textContent='Carico la foto…';try{const a=await uploadFile(f);if(d.img)ed.oldImg=ed.oldImg||d.img;d.img=a.p;drawCover();drawRes();$('#wm-msg').textContent='Foto caricata';}catch(err){toast('Foto non caricata: '+errMsg(err),'err');}ed.busy=0;};
-  $('#wmf [name=pct]').addEventListener('input',e=>{$('#wm-pctv').textContent=e.target.value+'%';});
-  $('#wm-rate').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(!b)return;const v=+b.dataset.r;d.rating=d.rating===v?0:v;$$('#wm-rate button').forEach(x=>x.classList.toggle('on',+x.dataset.r<=d.rating));});
-  $('#wmf [name=status]').addEventListener('change',e=>{if(e.target.value==='finito'&&!$('#wmf [name=finished]').value)$('#wmf [name=finished]').value=isoDay();if(e.target.value==='finito'&&+$('#wmf [name=pct]').value<100){$('#wmf [name=pct]').value=100;$('#wm-pctv').textContent='100%';}});
-  $('#wm-ok').onclick=async()=>{
-    const fd=new FormData($('#wmf'));d.title=String(fd.get('title')||'').trim();if(!d.title){toast('Scrivi il titolo','err');return;}
-    if(ed.busy){toast('Attendi il caricamento della foto','err');return;}
-    d.type=typeNow();d.status=String(fd.get('status')||'da');d.platform=String(fd.get('platform')||'').trim();d.progress=String(fd.get('progress')||'').trim();d.pct=+fd.get('pct')||0;d.finished=String(fd.get('finished')||'');d.note=String(fd.get('note')||'').trim();
-    if(d.status==='corso'&&!d.started)d.started=isoDay();d.upd=Date.now();
-    if(!d.cover&&!d.img&&ed.res[0])d.cover=ed.res[0].cover;
-    const b=body(d);closeModal();if(ed.oldImg&&ed.oldImg!==d.img)removeStored([ed.oldImg]);
-    if(await put('watch/'+d.id,b))toast(isNew?`${d.title} aggiunto`:'Salvato','ok');
-  };
-  const del=$('#wm-del');if(del)del.onclick=async()=>{if(!armed(del))return;const img=d.img;closeModal();if(await drop('watch/'+d.id)){toast('Eliminato','ok');removeStored([img]);}};
-}
-
 /* ================= MENU: backup, install, logout ================= */
 function backupData(){
   const out={app:'capri',version:1,exported:new Date().toISOString()};
@@ -2346,7 +2179,7 @@ $('#menu-btn').onclick=()=>{
     <button class="btn" id="m-exp" type="button">Scarica backup completo (file .json)</button>
     <label class="btn" style="cursor:pointer"><input type="file" accept=".json,application/json" hidden id="m-imp">Ripristina da un backup</label>
     <div class="note-box"><b>Installa come app</b><br>${ios?'In Safari tocca Condividi, poi “Aggiungi alla schermata Home”.':'Nel menu del browser (⋮) scegli “Installa app” o “Aggiungi a schermata Home”.'} Capri si aprirà a schermo intero con la sua icona.</div>
-    <div class="note-box">Gli allegati restano nel tuo archivio Supabase: il backup contiene ticket, wishlist, watchlist, spese, abbonamenti, note, fogli e impostazioni.</div>
+    <div class="note-box">Gli allegati restano nel tuo archivio Supabase: il backup contiene ticket, wishlist, spese, abbonamenti, note, fogli e impostazioni.</div>
     <button class="btn danger" id="m-out" type="button">Esci</button>
   </div>`);
   $('#m-name-ok').onclick=async()=>{const n=$('#m-name').value.trim();await put('config/main',{...cfg(),name:n});toast('Nome salvato','ok');renderOggi();};
@@ -2357,14 +2190,14 @@ $('#menu-btn').onclick=()=>{
     let j;try{j=JSON.parse(await f.text());}catch(err){toast('File di backup non valido','err');return;}
     if(!j||j.app!=='capri'){toast('Questo non è un backup di Capri','err');return;}
     closeModal();let n=0;
-    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note','watch'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
+    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
     toast(`Ripristinati ${n} elementi`,'ok');
   };
   $('#m-out').onclick=async()=>{await SB.auth.signOut();await authStorage.removeItem('capri-login-at');location.reload();};
 };
 
 /* ================= ROUTER + BOOT ================= */
-const VIEWS=['oggi','ticket','wishlist','watchlist','finanze','note'];
+const VIEWS=['oggi','ticket','wishlist','finanze','note'];
 const HALIAS={spese:['finanze','spese'],abbonamenti:['finanze','abb'],fogli:['finanze','fogli']};
 function route(){
   const hh=location.hash.slice(1);let v=hh;if(HALIAS[hh]){v=HALIAS[hh][0];S.fsub=HALIAS[hh][1];}
@@ -2373,7 +2206,7 @@ function route(){
   S.view=v;document.body.dataset.v=v;
   VIEWS.forEach(x=>{$('#v-'+x).hidden=x!==v;});
   $$('[data-nav]').forEach(a=>a.classList.toggle('on',a.dataset.nav===v));
-  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();else if(v==='watchlist')renderWatch();
+  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
   scrollTo(0,0);
 }
@@ -2387,7 +2220,6 @@ SUBS.sheets=onSheets;
 SUBS.config=docs=>{const m=docs.find(d=>d.id==='main');S.cfg=m?clone(m.data):null;renderTickets();renderWish();renderOggi();finRefresh();};
 SUBS.spese=docs=>{S.spese=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi();finRefresh();};
 SUBS.abbonamenti=docs=>{S.abb=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi();finRefresh();};
-SUBS.watch=docs=>{S.watch=docs.map(d=>({...clone(d.data),id:d.id}));renderWatch();renderOggi();};
 SUBS.push=()=>{renderOggi();};
 SUBS.note=docs=>{S.notes=docs.map(d=>({...clone(d.data),id:d.id}));renderNotes();renderOggi();};
 
@@ -2415,7 +2247,7 @@ async function start(session){
   try{await loadAll();syncState();}
   catch(e){setSync('Archivio non raggiungibile','err');showErr(e);S.loaded={t:1,w:1,s:1};S.ready=true;renderTickets();renderWish();renderOggi();renderNotes();if(S.view==='finanze')renderFin();return;}
   $('#errbar').hidden=true;
-  S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();renderWatch();if(S.view==='finanze')renderFin();
+  S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();if(S.view==='finanze')renderFin();
   try{SB.channel('docs-'+UID).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'user_id=eq.'+UID},onRealtime).subscribe();}catch(e){}
   let lastLoad=Date.now();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastLoad>20000&&!pendN&&!dirty.size&&!S.ed){lastLoad=Date.now();loadAll().catch(()=>{});}});
