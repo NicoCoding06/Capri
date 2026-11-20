@@ -1,6 +1,37 @@
-/* Capri: service worker per le notifiche (nessuna cache: il sito resta sempre aggiornato). */
+/* Capri: service worker.
+   - Notifiche push.
+   - Apertura anche senza rete: il sito si scarica sempre aggiornato (rete prima) e,
+     se la connessione manca, si apre l'ultima versione salvata. I dati restano su Supabase. */
+var CACHE = 'capri-shell-v1';
+
 self.addEventListener('install', function () { self.skipWaiting(); });
-self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
+self.addEventListener('activate', function (e) {
+  e.waitUntil(caches.keys().then(function (keys) {
+    return Promise.all(keys.filter(function (k) { return k.indexOf('capri-shell-') === 0 && k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+  }).then(function () { return self.clients.claim(); }));
+});
+
+self.addEventListener('fetch', function (e) {
+  var r = e.request;
+  if (r.method !== 'GET') return;
+  var u = new URL(r.url);
+  var same = u.origin === self.location.origin;
+  var cdn = u.hostname === 'cdn.jsdelivr.net';
+  if (!same && !cdn) return;
+  e.respondWith(fetch(r).then(function (res) {
+    if (res && (res.ok || res.type === 'opaque')) {
+      var copy = res.clone();
+      caches.open(CACHE).then(function (c) { c.put(r, copy); }).catch(function () {});
+    }
+    return res;
+  }).catch(function () {
+    return caches.match(r, { ignoreSearch: same }).then(function (m) {
+      if (m) return m;
+      if (r.mode === 'navigate') return caches.match(self.registration.scope).then(function (x) { return x || Response.error(); });
+      return Response.error();
+    });
+  }));
+});
 
 self.addEventListener('push', function (e) {
   var d = {};

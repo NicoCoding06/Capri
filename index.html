@@ -394,6 +394,15 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
 .sl-days button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:transparent;color:var(--mut);font-weight:700;cursor:pointer}
 .sl-days button.on{background:var(--acc);border-color:var(--acc);color:#000}
 .sl-c{display:grid;gap:8px}
+.snz{display:flex;gap:6px;flex-wrap:wrap}
+.snz button{min-height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--line2);background:transparent;color:#e6e6ec;font-weight:700;font-size:13px;cursor:pointer}
+.snz button:hover{border-color:var(--acc);color:#fff}
+.rowc{display:flex;gap:8px;align-items:stretch}
+.rowc .rowi{flex:1;min-width:0}
+.ckb{--c:var(--u2);flex:none;width:46px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;position:relative}
+.ckb::before{content:"";position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:50%;border:2px solid var(--c);box-shadow:0 0 8px -2px var(--c)}
+.ckb:hover::before{background:var(--c)}
+.ckb:hover::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;color:#000;font-weight:700;font-size:12px}
 /* gate */
 .gate{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:24px;background:radial-gradient(900px 500px at 50% -10%,color-mix(in srgb,var(--tk) 22%,transparent),transparent 65%),var(--bg);overflow:auto}
 .gcard{width:min(420px,100%);background:rgba(17,17,20,.9);border:1px solid var(--line2);border-radius:26px;padding:30px;box-shadow:0 40px 100px rgba(0,0,0,.7)}
@@ -903,7 +912,7 @@ const OV=$('#ov'),DLG=$('#dlg');let onClose=null;
 function openModal(html,{wide=false,close=null}={}){DLG.innerHTML=html;DLG.className='dlg'+(wide?' wide':'');OV.hidden=false;OV.scrollTop=0;document.body.classList.add('lock');onClose=close;S.redraw=null;const f=DLG.querySelector('[autofocus]');if(f&&matchMedia('(pointer:fine)').matches)setTimeout(()=>f.focus(),30);}
 function closeModal(){if(OV.hidden)return;const c=onClose;onClose=null;try{if(c)c();}catch(e){console.error(e);}OV.hidden=true;DLG.innerHTML='';document.body.classList.remove('lock');S.redraw=null;}
 DLG.addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeModal();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!OV.hidden){e.preventDefault();closeModal();}});
+document.addEventListener('keydown',e=>{if(OV.hidden)return;if(e.key==='Escape'){e.preventDefault();closeModal();}else if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){const b=DLG.querySelector('.mf .btn.pri');if(b){e.preventDefault();b.click();}}});
 function armed(b,label='Conferma'){if(b.dataset.armed)return true;b.dataset.armed='1';const o=b.innerHTML;b.textContent=label;b.classList.add('warn');setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.innerHTML=o;b.classList.remove('warn');}},3500);return false;}
 const errMsg=e=>(e&&(e.message||e.error_description||e.code))||'errore';
 
@@ -1062,7 +1071,7 @@ function tCard(t){
     </dl>
     ${attChips(t.att)}
     ${last?`<div class="lastnote"><time>${fmtTime(last.t)}${notes.length>1?` · ${notes.length} aggiornamenti`:''}</time>${esc(last.x)}</div>`:''}
-    <div class="tk-f"><button class="btn sm ghost" data-act="open">Apri</button><button class="btn sm ${done?'ghost':'ok'}" data-act="toggle">${done?'Riapri':'✓ Completa'}</button></div>
+    <div class="tk-f"><button class="btn sm ghost" data-act="open">Apri</button>${!done&&n!==null&&n<=0?'<button class="btn sm ghost" data-act="snooze" title="Sposta la scadenza a domani">→ Domani</button>':''}<button class="btn sm ${done?'ghost':'ok'}" data-act="toggle">${done?'Riapri':'✓ Completa'}</button></div>
   </article>`;
 }
 function renderTickets(){
@@ -1097,7 +1106,8 @@ $('#t-status').addEventListener('click',e=>{const b=e.target.closest('button');i
 $('#t-q').addEventListener('input',e=>{S.tf.q=e.target.value.trim();renderTickets();});
 $('#t-cat').addEventListener('change',e=>{S.tf.cat=e.target.value;renderTickets();});
 $('#t-urg').addEventListener('change',e=>{S.tf.urg=+e.target.value;renderTickets();});
-$('#t-sort').addEventListener('change',e=>{S.tf.sort=e.target.value;renderTickets();});
+$('#t-sort').addEventListener('change',e=>{S.tf.sort=e.target.value;try{localStorage.setItem('capri-tsort',S.tf.sort);}catch(err){}renderTickets();});
+try{const v=localStorage.getItem('capri-tsort');if(v){S.tf.sort=v;$('#t-sort').value=v;}}catch(e){}
 $('#t-new').onclick=()=>ticketModal(null);
 $('#t-cats').onclick=()=>catManager('tcats');
 $('#t-grid').addEventListener('click',e=>{
@@ -1105,9 +1115,15 @@ $('#t-grid').addEventListener('click',e=>{
   const card=e.target.closest('.tk');if(!card)return;const t=S.tickets.find(x=>x.id===card.dataset.id);if(!t)return;
   const act=e.target.closest('[data-act]');
   if(act&&act.dataset.act==='toggle'){toggleDone(t);return;}
+  if(act&&act.dataset.act==='snooze'){snooze(t,1);return;}
   ticketModal(t);
 });
 $('#t-grid').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList.contains('tk')){const t=S.tickets.find(x=>x.id===e.target.dataset.id);if(t)ticketModal(t);}});
+async function snooze(t,days){
+  const d=new Date();d.setDate(d.getDate()+days);const due=isoDay(d);const b=body(t);
+  b.notes=(b.notes||[]).concat({t:Date.now(),x:`Scadenza spostata: ${fmtDate(t.due)} → ${fmtDate(due)}`});b.due=due;b.upd=Date.now();
+  if(await put('tickets/'+t.id,b))toast(`#${t.num} spostato a ${days===1?'domani':fmtDate(due)}`,'ok');
+}
 async function toggleDone(t){
   const b=body(t);const done=t.status!=='fatto';
   b.status=done?'fatto':'aperto';b.upd=Date.now();if(done)b.doneAt=Date.now();else delete b.doneAt;
@@ -1131,6 +1147,7 @@ function ticketModal(t){
     <label class="f"><span>Macrocategoria</span><select name="cat"><option value="">Nessuna</option>${cats.map(c=>`<option ${c.n===d.cat?'selected':''}>${esc(c.n)}</option>`).join('')}</select></label>
     <label class="f"><span>Stato</span><select name="status">${Object.entries(STAT).map(([k,v])=>`<option value="${k}" ${d.status===k?'selected':''}>${v}</option>`).join('')}</select></label>
     <label class="f"><span>Scadenza</span><input type="date" name="due" value="${esc(d.due||'')}"></label>
+    <div class="f full"><span>Scadenza rapida</span><div class="snz" id="t-snz"><button type="button" data-sz="0">Oggi</button><button type="button" data-sz="1">Domani</button><button type="button" data-sz="3">+3 giorni</button><button type="button" data-sz="7">+1 settimana</button><button type="button" data-sz="30">+1 mese</button><button type="button" data-sz="x">Nessuna</button></div></div>
     <label class="f full"><span>Descrizione</span><textarea name="desc" rows="7" placeholder="Tutti i dettagli: contesto, cosa serve, contatti, riferimenti…">${esc(d.desc)}</textarea></label>
   </form>
   <div class="sec"><div class="sh"><h3>Allegati</h3><label class="btn ghost sm">${ico('clip')}<input type="file" multiple hidden id="t-file">Allega file</label></div>
@@ -1141,6 +1158,7 @@ function ticketModal(t){
   const drawAtt=()=>{const el=$('#t-att');if(!el)return;el.innerHTML=attRows(d.att,true)+(ed.busy?`<p class="mut small" style="margin:0">Caricamento di ${ed.busy} file…</p>`:'');};
   const drawNotes=()=>{const el=$('#t-notes');if(!el)return;el.innerHTML=d.notes.length?d.notes.map((n,i)=>({n,i})).reverse().map(({n,i})=>`<li><time>${fmtTime(n.t)}</time>${esc(n.x)}<button class="btn sm ghost" data-nrm="${i}" aria-label="Elimina aggiornamento" type="button">×</button></li>`).join(''):'<li class="mut small">Ancora nessun aggiornamento.</li>';};
   drawAtt();drawNotes();S.redraw=drawAtt;
+  $('#t-snz').addEventListener('click',e=>{const b=e.target.closest('[data-sz]');if(!b)return;const inp=$('#tf [name=due]');if(b.dataset.sz==='x'){inp.value='';return;}const base=new Date();base.setDate(base.getDate()+(+b.dataset.sz));inp.value=isoDay(base);});
   const read=()=>{const fd=new FormData($('#tf'));d.title=String(fd.get('title')||'').trim();d.urg=+fd.get('urg')||2;d.cat=String(fd.get('cat')||'');d.status=String(fd.get('status')||'aperto');d.due=String(fd.get('due')||'');d.desc=String(fd.get('desc')||'');};
   async function addFiles(files){
     files=[...files];if(!files.length)return;
@@ -1244,7 +1262,8 @@ function renderWish(){
 $('#w-status').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.wf.status=b.dataset.v;$$('#w-status button').forEach(x=>x.classList.toggle('on',x===b));renderWish();});
 $('#w-q').addEventListener('input',e=>{S.wf.q=e.target.value.trim();renderWish();});
 $('#w-cat').addEventListener('change',e=>{S.wf.cat=e.target.value;renderWish();});
-$('#w-sort').addEventListener('change',e=>{S.wf.sort=e.target.value;renderWish();});
+$('#w-sort').addEventListener('change',e=>{S.wf.sort=e.target.value;try{localStorage.setItem('capri-wsort',S.wf.sort);}catch(err){}renderWish();});
+try{const v=localStorage.getItem('capri-wsort');if(v){S.wf.sort=v;$('#w-sort').value=v;}}catch(e){}
 $('#w-new').onclick=()=>wishModal(null);
 $('#w-cats').onclick=()=>catManager('wcats');
 $('#w-refresh').onclick=()=>autoPrices(true);
@@ -1770,7 +1789,7 @@ const monthLabel=m=>cap(MESI.format(new Date(m+'-15T12:00:00')));
 const monthName=m=>new Intl.DateTimeFormat('it-IT',{month:'long'}).format(new Date(m+'-15T12:00:00'));
 const shiftMonth=(m,d)=>{const[y,mo]=m.split('-').map(Number);const x=new Date(y,mo-1+d,15);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');};
 const thisMonth=()=>isoDay().slice(0,7);
-S.month=thisMonth();S.fsub='spese';S.spese=[];S.abb=[];S.notes=[];S.nf={f:'tutte',q:''};
+S.month=thisMonth();S.fsub=(()=>{try{return localStorage.getItem('capri-fsub')||'spese';}catch(e){return'spese';}})();S.spese=[];S.abb=[];S.notes=[];S.nf={f:'tutte',q:''};
 const scatOf=n=>cfg().scats.find(c=>c.n===n);
 const scol=n=>(scatOf(n)||{}).c||'#9a9aa3';
 const spOfMonth=m=>S.spese.filter(x=>String(x.d||'').startsWith(m));
@@ -1930,7 +1949,7 @@ function renderFin(){
 }
 $('#f-actions').addEventListener('click',e=>{const b=e.target.closest('[data-fa]');if(!b)return;const a=b.dataset.fa;
   if(a==='spesa')spesaModal();else if(a==='abb')abbModal();else if(a==='sheet')newSheet();else if(a==='help')showHelp();else if(a==='tosheet')monthToSheet();});
-$('#f-sub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(S.ed)commitEdit(0,0,true);S.fsub=b.dataset.v;history.replaceState(null,'','#'+({spese:'spese',abb:'abbonamenti',fogli:'fogli'}[S.fsub]));renderFin();});
+$('#f-sub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(S.ed)commitEdit(0,0,true);S.fsub=b.dataset.v;try{localStorage.setItem('capri-fsub',S.fsub);}catch(err){}history.replaceState(null,'','#'+({spese:'spese',abb:'abbonamenti',fogli:'fogli'}[S.fsub]));renderFin();});
 /* ================= NOTE ================= */
 const NCOL=['#22d3ee','#ffd60a','#ff4fd8','#1fe08f','#ff8a1f','#4d8dff','#a78bfa','#9a9aa3'];
 function nFiltered(){
@@ -1978,14 +1997,16 @@ function noteModal(n,kind){
   <div class="mf">${isNew?'':'<button class="btn danger" id="nm-del" type="button">Elimina</button>'}<span class="sp"></span><button class="btn pri" data-close type="button">Fatto</button></div>`,{wide:true,close:()=>{if(!deleted)saveN();}});
   const read=()=>{d.title=$('#nm-title').value.trim();d.body=$('#nm-body').value;d.color=(DLG.querySelector('[name=nc]:checked')||{}).value||d.color;d.pin=$('#nm-pin').checked;
     d.items=$$('#nm-list .cl-row').map(r=>({t:r.querySelector('[type=text]').value.trim(),d:r.querySelector('[type=checkbox]').checked})).filter(i=>i.t);};
-  const drawList=()=>{$('#nm-list').innerHTML=d.items.map((it,i)=>`<div class="cl-row"><input type="checkbox" ${it.d?'checked':''} aria-label="Fatto"><input type="text" value="${esc(it.t)}" placeholder="Elemento"><button class="btn sm ghost" data-rm="${i}" type="button" aria-label="Rimuovi">×</button></div>`).join('')+`<button class="btn ghost sm" id="nm-add" type="button">${ico('plus')}Aggiungi elemento</button>`;};
+  const drawList=()=>{$('#nm-list').innerHTML=d.items.map((it,i)=>`<div class="cl-row"><input type="checkbox" ${it.d?'checked':''} aria-label="Fatto"><input type="text" value="${esc(it.t)}" placeholder="Elemento"><button class="btn sm ghost" data-rm="${i}" type="button" aria-label="Rimuovi">×</button></div>`).join('')+`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" id="nm-add" type="button">${ico('plus')}Aggiungi elemento</button>${d.items.some(i=>i.d)?'<button class="btn ghost sm" id="nm-clean" type="button">Togli quelli fatti</button>':''}</div>`;};
   const setKind=k=>{if(d.kind!==k){read();if(k==='lista'&&!d.items.length&&d.body.trim()){d.items=d.body.split('\n').map(t=>t.replace(/^\s*[-*•]\s*/,'').trim()).filter(Boolean).map(t=>({t,d:false}));d.body='';$('#nm-body').value='';}
       else if(k==='testo'&&!d.body.trim()&&d.items.length){d.body=d.items.map(i=>'- '+i.t).join('\n');d.items=[];$('#nm-body').value=d.body;}}
     d.kind=k;$$('#nm-kind button').forEach(b=>b.classList.toggle('on',b.dataset.v===k));$('#nm-body').hidden=k!=='testo';$('#nm-list').hidden=k!=='lista';if(k==='lista'){if(!d.items.length)d.items=[{t:'',d:false}];drawList();}};
   setKind(d.kind);
   $('#nm-kind').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setKind(b.dataset.v);});
   $('#nm-list').addEventListener('click',e=>{const rm=e.target.closest('[data-rm]');if(rm){read();d.items.splice(+rm.dataset.rm,1);drawList();return;}
+    if(e.target.closest('#nm-clean')){read();d.items=d.items.filter(i=>!i.d);if(!d.items.length)d.items=[{t:'',d:false}];drawList();return;}
     if(e.target.closest('#nm-add')){read();d.items.push({t:'',d:false});drawList();const ins=$$('#nm-list [type=text]');ins[ins.length-1].focus();}});
+  $('#nm-list').addEventListener('change',e=>{if(e.target.type==='checkbox'){read();drawList();}});
   $('#nm-list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.type==='text'){e.preventDefault();read();const rows=$$('#nm-list .cl-row');const idx=rows.indexOf(e.target.closest('.cl-row'));const all=$$('#nm-list .cl-row').map(r=>({t:r.querySelector('[type=text]').value.trim(),d:r.querySelector('[type=checkbox]').checked}));all.splice(idx+1,0,{t:'',d:false});d.items=all;drawList();const ins=$$('#nm-list [type=text]');if(ins[idx+1])ins[idx+1].focus();}});
   function saveN(){
     read();const b=body(d);
@@ -2027,7 +2048,7 @@ function renderOggi(){
   $('#o-sum').innerHTML=cap(parts.slice(0,-1).join(', ')+(parts.length>1?' e ':'')+parts[parts.length-1])+'.';
   const todo=act.slice().sort((a,b)=>(a.due?Date.parse(a.due):9e15)-(b.due?Date.parse(b.due):9e15)||(b.urg||2)-(a.urg||2)).slice(0,6);
   const card=(cl,icon,title,link,inner)=>`<div class="card" style="--c:${cl}"><h2>${ico(icon)}${title}${link?`<a href="${link[0]}">${link[1]} →</a>`:''}</h2>${inner}</div>`;
-  const cTodo=card('var(--tk)','ticket','Da fare',['#ticket','Tutti'],todo.length?`<div class="rows">${todo.map(t=>{const n=daysTo(t.due);return`<button class="rowi" data-oa="${A(()=>ticketModal(t))}" style="--c:${URG[t.urg||2].c}"><span class="dot"></span><span class="t">${esc(t.title)}</span><span class="s${n!==null&&n<0?' late':n!==null&&n<=3?' soon':''}">${t.due?relDays(n):'senza scadenza'}</span></button>`;}).join('')}</div>`:`<p class="mini">Niente da fare. Goditela!</p>`);
+  const cTodo=card('var(--tk)','ticket','Da fare',['#ticket','Tutti'],todo.length?`<div class="rows">${todo.map(t=>{const n=daysTo(t.due);return`<div class="rowc"><button class="ckb" data-oa="${A(()=>toggleDone(t))}" title="Segna come completato" aria-label="Completa ${esc(t.title)}" style="--c:${URG[t.urg||2].c}"></button><button class="rowi" data-oa="${A(()=>ticketModal(t))}" style="--c:${URG[t.urg||2].c}"><span class="dot"></span><span class="t">${esc(t.title)}</span><span class="s${n!==null&&n<0?' late':n!==null&&n<=3?' soon':''}">${t.due?relDays(n):'senza scadenza'}</span></button></div>`;}).join('')}</div>`:`<p class="mini">Niente da fare. Goditela!</p>`);
   const pct=bud?Math.min(100,mTot/bud*100):0;
   const cMoney=card('var(--fn)','wallet','Spese di '+monthName(thisMonth()),['#spese','Dettagli'],`<div class="big">${eur(mTot)}</div>${bud?`<div class="prog"><i class="${mTot>bud?'over':''}" style="width:${pct.toFixed(1)}%"></i></div><p class="mini">${mTot>bud?`Oltre il budget di ${eur(mTot-bud)}`:`Restano ${eur(bud-mTot)} su ${eur(bud)}`}</p>`:`<p class="mini">${mList.length} ${plural(mList.length,'spesa','spese')} registrate · imposta un budget da Categorie e budget</p>`}<div class="rows" style="margin-top:12px">${cbarsHtml(mList,4)}</div><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>spesaModal())}">${ico('plus')}Aggiungi spesa</button>`);
   const up=abs.filter(a=>a.n<=45).slice(0,6);
@@ -2205,7 +2226,7 @@ function route(){
   if(S.ed&&!(v==='finanze'&&S.fsub==='fogli'))commitEdit(0,0,true);
   S.view=v;document.body.dataset.v=v;
   VIEWS.forEach(x=>{$('#v-'+x).hidden=x!==v;});
-  $$('[data-nav]').forEach(a=>a.classList.toggle('on',a.dataset.nav===v));
+  $$('[data-nav]').forEach(a=>{a.classList.toggle('on',a.dataset.nav===v);if(a.dataset.nav===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
   scrollTo(0,0);
