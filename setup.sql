@@ -22,6 +22,10 @@ create policy "docs_insert_own" on public.docs for insert to authenticated with 
 create policy "docs_update_own" on public.docs for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "docs_delete_own" on public.docs for delete to authenticated using (user_id = auth.uid());
 
+-- 2b) Permessi della tabella per gli utenti collegati (necessari sui progetti Supabase recenti)
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on table public.docs to authenticated;
+
 -- 3) Sincronizzazione in tempo reale tra i dispositivi
 alter table public.docs replica identity full;
 do $$ begin

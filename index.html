@@ -41,7 +41,7 @@ svg{flex:none}
 .nav a.on{background:var(--p3);color:#fff;box-shadow:inset 0 0 0 1px var(--line2)}
 .nav a[data-nav=oggi].on svg{color:var(--og)}.nav a[data-nav=note].on svg{color:var(--nt)}.nav a[data-nav=ticket].on svg{color:var(--tk)}.nav a[data-nav=wishlist].on svg{color:var(--wl)}.nav a[data-nav=finanze].on svg{color:var(--fn)}
 .tright{margin-left:auto;display:flex;align-items:center;gap:12px}
-.sync{font-size:13px;color:var(--mut);display:flex;align-items:center;gap:7px;white-space:nowrap}
+.sync{cursor:pointer;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:7px;white-space:nowrap}
 .sync::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
 .sync.ok::before{background:var(--fn);box-shadow:0 0 8px var(--fn)}.sync.warn::before{background:var(--u2)}.sync.err::before{background:var(--u4)}
 .ibtn{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line);background:var(--p1);cursor:pointer}
@@ -369,7 +369,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
 .gerr{color:var(--u4);font-size:14px;min-height:1.2em;margin:0}
 @media(max-width:760px){
   .top{gap:10px;padding:calc(8px + var(--sat)) 16px 8px;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(8,8,10,.97)}
-  .sync{font-size:0;gap:0}
+  .sync{font-size:0;gap:0;padding:12px 4px}
   .nav{position:fixed;left:10px;right:10px;bottom:calc(10px + var(--sab));justify-content:space-around;z-index:30;padding:6px;border-radius:20px;background:rgba(20,20,24,.97);box-shadow:0 10px 30px rgba(0,0,0,.6)}
   .nav a{flex:1;flex-direction:column;gap:2px;font-size:11px;padding:6px 2px;justify-content:center;border-radius:14px}
   .nav a svg{width:22px;height:22px}
@@ -451,6 +451,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
   <div class="tright"><span class="sync" id="sync">Connessione…</span><button class="ibtn" id="add-btn" aria-label="Aggiungi al volo"><svg><use href="#i-plus"/></svg></button><button class="ibtn" id="menu-btn" aria-label="Menu: backup, installa, esci"><svg><use href="#i-menu"/></svg></button></div>
 </header>
 <main>
+  <div class="alert" id="errbar" hidden style="--c:var(--u4);cursor:default;margin-bottom:16px"><span class="dot"></span><span class="t"></span><button class="btn sm" id="errbar-retry" type="button">Riprova</button></div>
   <section class="view" id="v-oggi" hidden>
     <div class="hero">
       <svg class="hero-art" id="o-art" viewBox="0 0 24 24"><use href="#i-home"/></svg>
@@ -2097,13 +2098,24 @@ $('#g-login').addEventListener('submit',async e=>{
 async function start(session){
   UID=session.user.id;EMAIL=session.user.email||'';gate.hidden=true;setSync('Caricamento…','warn');
   try{await loadAll();syncState();}
-  catch(e){setSync('Archivio non raggiungibile','err');toast('Non riesco a leggere i dati: '+errMsg(e)+'. Se il progetto Supabase è in pausa, riattivalo dalla sua dashboard.','err');S.loaded={t:1,w:1,s:1};S.ready=true;renderTickets();renderWish();renderOggi();renderNotes();if(S.view==='finanze')renderFin();return;}
+  catch(e){setSync('Archivio non raggiungibile','err');showErr(e);S.loaded={t:1,w:1,s:1};S.ready=true;renderTickets();renderWish();renderOggi();renderNotes();if(S.view==='finanze')renderFin();return;}
+  $('#errbar').hidden=true;
   S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();if(S.view==='finanze')renderFin();
   try{SB.channel('docs-'+UID).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'user_id=eq.'+UID},onRealtime).subscribe();}catch(e){}
   let lastLoad=Date.now();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastLoad>20000&&!pendN&&!dirty.size&&!S.ed){lastLoad=Date.now();loadAll().catch(()=>{});}});
   setTimeout(()=>{if(!autoRan){autoRan=true;autoPrices(false);}},1200);
 }
+function showErr(e){
+  const code=(e&&e.code)||'',msg=errMsg(e);let hint='';
+  if(code==='42P01'||code==='PGRST205'||/does not exist|schema cache/i.test(msg))hint='La tabella dei dati non esiste: esegui il file setup.sql nel SQL Editor di Supabase.';
+  else if(code==='42501'||/permission denied/i.test(msg))hint='Mancano i permessi sulla tabella: esegui di nuovo il file setup.sql aggiornato nel SQL Editor di Supabase.';
+  else if(/fetch|network|load failed/i.test(msg))hint='Connessione assente, oppure il progetto Supabase è in pausa: riattivalo dalla sua dashboard.';
+  else hint='Controlla che il progetto Supabase sia attivo e che setup.sql sia stato eseguito.';
+  const b=$('#errbar');b.hidden=false;b.querySelector('.t').innerHTML=`<b>Non riesco a leggere i tuoi dati.</b> ${esc(hint)}<br><span class="mut small">Dettaglio tecnico: ${esc(msg)}${code?' ('+esc(code)+')':''}</span>`;
+}
+$('#errbar-retry').onclick=async()=>{const b=$('#errbar-retry');b.disabled=true;b.textContent='Riprovo…';try{await loadAll();$('#errbar').hidden=true;syncState();toast('Dati caricati','ok');}catch(e){showErr(e);}b.disabled=false;b.textContent='Riprova';};
+$('#sync').addEventListener('click',()=>{const s=$('#sync');if(s.classList.contains('err')&&$('#errbar').hidden===false){$('#errbar').scrollIntoView({block:'center'});}else toast(s.title||'');});
 async function boot(){
   const C=getCfg();
   if(!C){gateShow('setup','');return;}
