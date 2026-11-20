@@ -25,6 +25,8 @@ create policy "docs_delete_own" on public.docs for delete to authenticated using
 -- 2b) Permessi della tabella per gli utenti collegati (necessari sui progetti Supabase recenti)
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on table public.docs to authenticated;
+grant usage on schema public to service_role;
+grant select, insert, update, delete on table public.docs to service_role;
 
 -- 3) Sincronizzazione in tempo reale tra i dispositivi
 alter table public.docs replica identity full;

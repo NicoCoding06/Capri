@@ -19,8 +19,8 @@
    PICTURE: each section opens on a lit hero panel holding its live numbers, then the working board itself
    COLOUR and TYPE: near-black ground, white Helvetica; blue tickets, magenta wishes, green money; urgency green, yellow, orange, red
    LAYOUT: sticky top bar; hero panel; filters; board. Bottom tab bar on phones, safe areas respected */
-:root{color-scheme:dark;--bg:#08080a;--p1:#111114;--p2:#18181c;--p3:#222228;--line:#2a2a31;--line2:#383841;--ink:#fff;--mut:#a3a3ae;--dim:#6f6f7a;--tk:#4d8dff;--wl:#ff4fd8;--fn:#1fe08f;--og:#ffb547;--nt:#22d3ee;--u1:#2ee27a;--u2:#ffd60a;--u3:#ff8a1f;--u4:#ff2d55;--acc:var(--tk);--r:16px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
-body[data-v=wishlist]{--acc:var(--wl)}body[data-v=finanze]{--acc:var(--fn)}body[data-v=oggi]{--acc:var(--og)}body[data-v=note]{--acc:var(--nt)}
+:root{color-scheme:dark;--bg:#08080a;--p1:#111114;--p2:#18181c;--p3:#222228;--line:#2a2a31;--line2:#383841;--ink:#fff;--mut:#a3a3ae;--dim:#6f6f7a;--tk:#4d8dff;--wl:#ff4fd8;--fn:#1fe08f;--og:#ffb547;--nt:#22d3ee;--wt:#a78bfa;--cpp:#ff2e93;--cpg:#3dff9a;--cpb:#43b3ff;--u1:#2ee27a;--u2:#ffd60a;--u3:#ff8a1f;--u4:#ff2d55;--acc:var(--tk);--r:16px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+body[data-v=wishlist]{--acc:var(--wl)}body[data-v=finanze]{--acc:var(--fn)}body[data-v=oggi]{--acc:var(--og)}body[data-v=note]{--acc:var(--nt)}body[data-v=watchlist]{--acc:var(--wt)}
 *{box-sizing:border-box;min-width:0}
 html{background:var(--bg)}
 body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.5 Helvetica,"Helvetica Neue",Arial,sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
@@ -39,7 +39,7 @@ svg{flex:none}
 .nav a svg{width:19px;height:19px}
 .nav a:hover{color:#fff}
 .nav a.on{background:var(--p3);color:#fff;box-shadow:inset 0 0 0 1px var(--line2)}
-.nav a[data-nav=oggi].on svg{color:var(--og)}.nav a[data-nav=note].on svg{color:var(--nt)}.nav a[data-nav=ticket].on svg{color:var(--tk)}.nav a[data-nav=wishlist].on svg{color:var(--wl)}.nav a[data-nav=finanze].on svg{color:var(--fn)}
+.nav a[data-nav=oggi].on svg{color:var(--og)}.nav a[data-nav=note].on svg{color:var(--nt)}.nav a[data-nav=watchlist].on svg{color:var(--wt)}.nav a[data-nav=ticket].on svg{color:var(--tk)}.nav a[data-nav=wishlist].on svg{color:var(--wl)}.nav a[data-nav=finanze].on svg{color:var(--fn)}
 .tright{margin-left:auto;display:flex;align-items:center;gap:12px}
 .sync{cursor:pointer;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:7px;white-space:nowrap}
 .sync::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
@@ -353,19 +353,67 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
 @keyframes pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--c) 18%,transparent),0 0 16px var(--c)}}
 .view:not([hidden]){animation:vin .45s cubic-bezier(.2,.7,.2,1)}
 @keyframes vin{from{opacity:0;transform:translateY(12px)}}
-.gate{--acc:var(--tk);background:var(--bg)}
+.gate{--acc:var(--cpp);background:var(--bg)}
 .gate .amb{position:absolute;z-index:0}
 .gcard{position:relative;z-index:1;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:rgba(17,17,20,.72)}
 .gcard .logo svg{animation:breatheB 4.5s ease-in-out infinite}
 @keyframes breatheB{50%{filter:drop-shadow(0 0 6px #4d8dff) drop-shadow(0 0 22px #4d8dff)}}
 .sync.ok::before{animation:pulse 3s ease-in-out infinite;--c:var(--fn)}
+/* watchlist */
+.wtgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(46%,180px),1fr));gap:14px}
+.wtgrid .skel{aspect-ratio:2/3;height:auto}
+.wt{--c:var(--wt);--s:var(--u1);position:relative;display:block;padding:0;border:1px solid color-mix(in srgb,var(--c) 32%,var(--line));border-radius:18px;overflow:hidden;background:var(--p1);cursor:pointer;text-align:left;font:inherit;color:#fff;aspect-ratio:2/3;transition:transform .2s,border-color .15s,box-shadow .2s;width:100%}
+.wt:hover{transform:translateY(-3px);border-color:var(--c);box-shadow:0 20px 50px -24px var(--c)}
+.wt-img{position:absolute;inset:0;background:radial-gradient(120% 90% at 30% 10%,color-mix(in srgb,var(--c) 45%,#000),#0b0b0d 72%)}
+.wt-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.wt-ph{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;font-weight:700;color:color-mix(in srgb,var(--c) 60%,#fff)}
+.wt-type{position:absolute;z-index:2;top:8px;left:8px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.72);border:1px solid var(--c)}
+.wt-b{position:absolute;z-index:2;left:0;right:0;bottom:0;padding:46px 12px 12px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.88) 48%);display:flex;flex-direction:column;gap:3px}
+.wt-b b{font-size:15px;line-height:1.2;overflow-wrap:anywhere}
+.wt-b small{font-size:12px;color:#cfcfd8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wt-st{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--s)}.wt-st i{width:7px;height:7px;border-radius:50%;background:var(--s);box-shadow:0 0 8px var(--s)}
+.wt-bar{height:4px;border-radius:9px;background:rgba(255,255,255,.18);overflow:hidden;margin-top:4px}.wt-bar i{display:block;height:100%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.stars{color:var(--u2);font-size:13px;letter-spacing:1px}.stars i{color:rgba(255,255,255,.2);font-style:normal}
+.wt-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px}.wt-row .wt{border-radius:14px}.wt-row .wt-b{padding:28px 8px 8px}.wt-row .wt-b b{font-size:12px}.wt-row .wt-ph{font-size:34px}
+.wtm{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:start}
+.wtm-cover{aspect-ratio:2/3;border-radius:16px;overflow:hidden;background:var(--p2);border:1px solid var(--line);display:grid;place-items:center;text-align:center;color:var(--mut);box-shadow:0 20px 50px -26px var(--acc)}
+.wtm-cover img{width:100%;height:100%;object-fit:cover}.wtm-cover svg{width:36px;height:36px;display:block;margin:0 auto 6px;color:var(--acc)}.wtm-cover small{font-size:12px}
+.covers{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;max-height:340px;overflow:auto}
+.covers:empty{display:none}
+.cvr{position:relative;padding:0;border:2px solid transparent;border-radius:12px;overflow:hidden;background:var(--p2);aspect-ratio:2/3;cursor:pointer}
+.cvr img{width:100%;height:100%;object-fit:cover;display:block}
+.cvr span{position:absolute;left:0;right:0;bottom:0;padding:16px 6px 5px;font-size:11px;line-height:1.2;color:#fff;background:linear-gradient(180deg,transparent,rgba(0,0,0,.88));text-align:left}
+.cvr.on{border-color:var(--acc);box-shadow:0 0 18px -2px var(--acc)}
+.rate{display:flex;gap:0}.rate button{background:none;border:0;font-size:26px;color:rgba(255,255,255,.18);cursor:pointer;padding:4px 3px;min-height:44px}.rate button.on{color:var(--u2);text-shadow:0 0 12px var(--u2)}
+input[type=range]{accent-color:var(--acc);padding:0;min-height:44px;background:none;border:0;box-shadow:none!important}
+/* notifiche */
+.notif-prev{background:rgba(44,44,50,.88);border-radius:20px;padding:12px 14px;border:1px solid rgba(255,255,255,.09);box-shadow:0 18px 40px -20px rgba(0,0,0,.9)}
+.np-app{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);margin-bottom:6px}.np-app svg{width:22px;height:22px;padding:3px;border-radius:6px;background:#08080a;color:var(--tk)}.np-app small{margin-left:auto}
+.notif-prev b{display:block;font-size:15px}.notif-prev p{margin:2px 0 0;white-space:pre-line;font-size:14px;color:#e6e6ea}
+/* Capri (Edgerunners 2): nero, rosa acceso con punta verde, riquadro verde degli occhi, glitch */
+.kicker{display:inline-flex;align-items:center;gap:8px;padding:3px 10px;border:1px solid color-mix(in srgb,var(--cpg) 70%,transparent);border-radius:3px;color:var(--cpg);font-size:12px;font-weight:700;box-shadow:0 0 12px -3px color-mix(in srgb,var(--cpg) 70%,transparent),inset 0 0 10px -6px var(--cpg);margin-bottom:12px}
+.kicker::before{content:"";width:6px;height:6px;background:var(--cpp);box-shadow:0 0 8px var(--cpp)}
+.hero{clip-path:polygon(0 0,100% 0,100% calc(100% - 26px),calc(100% - 26px) 100%,0 100%)}
+.hero::before{background:linear-gradient(90deg,transparent,var(--cpp) 18%,var(--acc) 50%,var(--cpg) 82%,transparent)!important}
+.hero::after{content:"";position:absolute;right:0;top:calc(100% - 27px);width:37px;height:2px;transform-origin:right center;transform:rotate(-45deg);background:linear-gradient(90deg,var(--cpg),var(--cpp));box-shadow:0 0 10px var(--cpp);pointer-events:none}
+.hero h1{animation:glitch 9s steps(1) infinite}
+@keyframes glitch{0%,93%,100%{text-shadow:none;transform:none}94%{text-shadow:-3px 0 var(--cpp),3px 0 var(--cpg);transform:translateX(2px)}95.5%{text-shadow:3px 0 var(--cpp),-3px 0 var(--cpg);transform:translateX(-2px) skewX(-6deg)}97%{text-shadow:-1px 0 var(--cpp),1px 0 var(--cpg);transform:none}}
+.empty::after{content:"[ ERRORE: NESSUN DATO AGGIUNTIVO ]";display:block;margin-top:14px;font-size:11px;letter-spacing:.08em;color:color-mix(in srgb,var(--cpg) 75%,transparent)}
+::selection{background:color-mix(in srgb,var(--cpp) 50%,transparent)}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--cpp) 30%,#2c2c34)}
+.gate .amb i:nth-child(1){background:var(--cpp)}.gate .amb i:nth-child(2){background:var(--cpg);opacity:.12}.gate .amb i:nth-child(3){background:var(--cpb);opacity:.1}
+.gcard{border-radius:6px;border-color:color-mix(in srgb,var(--cpp) 30%,var(--line2));clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+.gcard .logo svg{color:var(--cpp)!important;animation-name:breatheP!important}
+@keyframes breatheP{50%{filter:drop-shadow(0 0 6px var(--cpp)) drop-shadow(0 0 22px var(--cpp))}}
+.gate .btn.pri{--acc:var(--cpp)}
+@media(max-width:600px){.wtm{grid-template-columns:minmax(0,1fr)}.wtm-cover{width:150px;justify-self:center}.wtm .form{grid-template-columns:minmax(0,1fr)!important}.wtm .f.full{grid-column:auto}}
 /* gate */
 .gate{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:24px;background:radial-gradient(900px 500px at 50% -10%,color-mix(in srgb,var(--tk) 22%,transparent),transparent 65%),var(--bg);overflow:auto}
 .gcard{width:min(420px,100%);background:rgba(17,17,20,.9);border:1px solid var(--line2);border-radius:26px;padding:30px;box-shadow:0 40px 100px rgba(0,0,0,.7)}
 .gcard .logo{display:flex;align-items:center;gap:12px;font-size:34px;font-weight:700;letter-spacing:-.04em;margin-bottom:6px}
 .gcard .logo svg{width:36px;height:36px;color:var(--tk);filter:drop-shadow(0 0 16px color-mix(in srgb,var(--tk) 60%,transparent))}
 .gcard form{display:grid;gap:12px;margin-top:20px}
-.gate .btn.pri{--acc:var(--tk)}
+.gate .btn.pri{--acc:var(--cpp)}
 .gerr{color:var(--u4);font-size:14px;min-height:1.2em;margin:0}
 @media(max-width:760px){
   .top{gap:10px;padding:calc(8px + var(--sat)) 16px 8px;backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(8,8,10,.97)}
@@ -396,7 +444,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
 <body data-v="oggi">
 <div class="amb" aria-hidden="true"><i></i><i></i><i></i></div><div class="grain" aria-hidden="true"></div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-logo" viewBox="0 0 32 32"><path fill="currentColor" d="M9.6 13.2C7.6 10.2 7.7 6.9 9.4 4.6c.6 3 2 5.2 4.3 6.6zM22.4 13.2c2-3 1.9-6.3.2-8.6-.6 3-2 5.2-4.3 6.6z"/><circle cx="16" cy="18.5" r="9.2" fill="currentColor"/><path fill="#08080a" d="M11 16.4l4 1.6-3.2 1.5zM21 16.4l-4 1.6 3.2 1.5z"/><path d="M12.6 22.4c2.2 1.7 4.6 1.7 6.8 0" fill="none" stroke="#08080a" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-logo" viewBox="0 0 32 32"><path fill="currentColor" d="M9.6 13.2C7.6 10.2 7.7 6.9 9.4 4.6c.6 3 2 5.2 4.3 6.6zM22.4 13.2c2-3 1.9-6.3.2-8.6-.6 3-2 5.2-4.3 6.6z"/><circle cx="16" cy="18.5" r="9.2" fill="currentColor"/><path style="fill:var(--cpg)" d="M9.4 4.6l1.4 3.3-2.2.7c-.4-1.4-.1-2.8.8-4zM22.6 4.6l-1.4 3.3 2.2.7c.4-1.4.1-2.8-.8-4z"/><path fill="#08080a" d="M11 16.4l4 1.6-3.2 1.5zM21 16.4l-4 1.6 3.2 1.5z"/><path d="M12.6 22.4c2.2 1.7 4.6 1.7 6.8 0" fill="none" stroke="#08080a" stroke-width="1.6" stroke-linecap="round"/></symbol>
   <symbol id="i-ticket" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></g></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></g></symbol>
@@ -410,6 +458,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
   <symbol id="i-sheet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></g></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.3v5.4l4.6-2.7z" fill="currentColor"/></g></symbol>
   <symbol id="i-note" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h10l4 4v14H5z"/><path d="M8.5 10h7M8.5 14h7M8.5 18h4"/></g></symbol>
   <symbol id="i-wallet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/></g></symbol>
   <symbol id="i-repeat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></g></symbol>
@@ -421,7 +470,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
   <div class="amb" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="gcard">
     <div class="logo"><svg><use href="#i-logo"/></svg>Capri</div>
-    <p class="mut" id="g-sub" style="margin:0">Il tuo spazio personale.</p>
+    <p class="mut" id="g-sub" style="margin:0">Inserisci il chip.</p>
     <form id="g-login" hidden>
       <label class="f"><span>Email</span><input type="email" id="g-email" autocomplete="username" required></label>
       <label class="f"><span>Password</span><input type="password" id="g-pass" autocomplete="current-password" required></label>
@@ -445,6 +494,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
     <a href="#oggi" data-nav="oggi"><svg><use href="#i-home"/></svg><span>Oggi</span></a>
     <a href="#ticket" data-nav="ticket"><svg><use href="#i-ticket"/></svg><span>Ticket</span></a>
     <a href="#wishlist" data-nav="wishlist"><svg><use href="#i-star"/></svg><span>Wishlist</span></a>
+    <a href="#watchlist" data-nav="watchlist"><svg><use href="#i-play"/></svg><span>Watchlist</span></a>
     <a href="#finanze" data-nav="finanze"><svg><use href="#i-wallet"/></svg><span>Finanze</span></a>
     <a href="#note" data-nav="note"><svg><use href="#i-note"/></svg><span>Note</span></a>
   </nav>
@@ -492,6 +542,20 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
     </div>
     <div class="wgrid" id="w-grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
   </section>
+  <section class="view" id="v-watchlist" hidden>
+    <div class="hero">
+      <svg class="hero-art" viewBox="0 0 24 24"><use href="#i-play"/></svg>
+      <div class="hero-top"><div><p class="kicker" data-today></p><h1>Watchlist</h1><p class="sum" id="wt-sum">&nbsp;</p></div>
+        <div class="right"><button class="btn pri" id="wt-new"><svg><use href="#i-plus"/></svg>Aggiungi</button></div></div>
+      <div class="stats" id="wt-stats"></div>
+    </div>
+    <div class="filters">
+      <div class="seg" id="wt-status"><button data-v="corso" class="on">In corso</button><button data-v="da">Da iniziare</button><button data-v="finito">Finiti</button><button data-v="tutti">Tutti</button></div>
+      <label class="srch"><svg><use href="#i-search"/></svg><input type="search" id="wt-q" placeholder="Cerca nella watchlist" aria-label="Cerca nella watchlist"></label>
+      <select id="wt-type" aria-label="Tipo"></select>
+    </div>
+    <div class="wtgrid" id="wt-grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+  </section>
   <section class="view" id="v-finanze" hidden>
     <div class="hero">
       <svg class="hero-art" viewBox="0 0 24 24"><use href="#i-chart"/></svg>
@@ -538,6 +602,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
 <div class="ov" id="ov" hidden><div class="dlg" id="dlg" role="dialog" aria-modal="true"></div></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="config.js"></script>
+<script src="digest.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const FX=(()=>{
@@ -872,7 +937,7 @@ const errMsg=e=>(e&&(e.message||e.error_description||e.code))||'errore';
 
 /* ---------- storage (Supabase) ---------- */
 let SB=null,UID=null,EMAIL='';
-const CACHE={tickets:new Map(),wishlist:new Map(),sheets:new Map(),config:new Map(),spese:new Map(),abbonamenti:new Map(),note:new Map()};
+const CACHE={tickets:new Map(),wishlist:new Map(),sheets:new Map(),config:new Map(),spese:new Map(),abbonamenti:new Map(),note:new Map(),watch:new Map(),push:new Map(),pushkeys:new Map(),pushstate:new Map()};
 const SUBS={};
 const wq={},pend={};let pendN=0;
 function emit(coll){const fn=SUBS[coll];if(fn)fn([...(CACHE[coll]||new Map()).entries()].map(([id,data])=>({id,data})));}
@@ -1981,6 +2046,7 @@ function renderOggi(){
   if(bud&&mTot>bud)al.push({c:'var(--u4)',t:`Hai superato il budget di ${esc(monthName(thisMonth()))}`,s:`di ${eur(mTot-bud)}`,a:A(()=>{S.month=thisMonth();location.hash='#spese';})});
   else if(bud&&mTot>.85*bud)al.push({c:'var(--u2)',t:`Hai usato il ${Math.round(mTot/bud*100)}% del budget del mese`,s:`restano ${eur(bud-mTot)}`,a:A(()=>{S.month=thisMonth();location.hash='#spese';})});
   S.wish.filter(w=>(w.status||'voglio')==='voglio'&&w.target&&priceOf(w)!=null&&priceOf(w)<=w.target).slice(0,3).forEach(w=>al.push({c:'var(--u1)',t:`<b>${esc(w.name)}</b> è sotto il tuo prezzo obiettivo`,s:eur(priceOf(w)),a:A(()=>{location.hash='#wishlist';})}));
+  if(!(CACHE.push&&CACHE.push.size)&&!(S.cfg&&S.cfg.notifHide))al.push({c:'var(--wt)',t:'Ricevi ogni giorno il riepilogo dei ticket sul telefono',s:'Attiva notifiche',a:A(()=>notifModal())});
   $('#o-alerts').innerHTML=al.map(x=>`<button class="alert" style="--c:${x.c}" data-oa="${x.a}"><span class="dot" style="--c:${x.c}"></span><span class="t">${x.t}</span><span class="s">${esc(x.s)}</span></button>`).join('');
   const parts=[];
   parts.push(act.length?`hai <b>${act.length} ${plural(act.length,'ticket aperto','ticket aperti')}</b>${late.length?` (${late.length} ${plural(late.length,'scaduto','scaduti')})`:''}`:'non hai ticket aperti');
@@ -2000,10 +2066,13 @@ function renderOggi(){
   const cWish=card('var(--wl)','star',deals.length?'Occasioni in wishlist':'Wishlist',['#wishlist','Apri'],show.length?`<div class="rows">${show.map(w=>{const dl=wDelta(w);return`<button class="rowi" data-oa="${A(()=>{location.hash='#wishlist';})}" style="--c:${esc((catOf('wcats',w.cat)||{}).c||'#9a9aa3')}"><span class="dot"></span><span class="t">${esc(w.name)}</span>${dl!==null&&dl!==0?`<span class="s" style="color:${dl<0?'var(--u1)':'var(--u4)'}">${dl<0?'▼':'▲'} ${Math.abs(dl*100).toFixed(0)}%</span>`:''}<span class="a">${eur(priceOf(w))}</span></button>`;}).join('')}</div>`:`<p class="mini">La wishlist è vuota.</p>`);
   const pins=S.notes.filter(n=>n.pin).sort((a,b)=>(b.upd||0)-(a.upd||0)).slice(0,3);
   const cNotes=card('var(--nt)','note','Note fissate',['#note','Tutte'],pins.length?`<div class="onotes">${pins.map(n=>nCard(n,true)).join('')}</div>`:`<p class="mini">Fissa una nota per vederla qui.</p><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>noteModal(null))}">${ico('plus')}Nuova nota</button>`);
-  $('#o-dash').innerHTML=cTodo+cMoney+cNext+cWish+cNotes;
+  const curW=S.watch.filter(x=>x.status==='corso').sort((a,b)=>(b.upd||0)-(a.upd||0)).slice(0,6);
+  const cWatch=card('var(--wt)','play','In corso',['#watchlist','Watchlist'],curW.length?`<div class="wt-row">${curW.map(x=>wtCard(x,true)).join('')}</div>`:`<p class="mini">Aggiungi cosa stai giocando, guardando o leggendo: la copertina la trova Capri.</p><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>watchModal(null))}">${ico('plus')}Aggiungi alla watchlist</button>`);
+  $('#o-dash').innerHTML=cTodo+cMoney+cNext+cWatch+cWish+cNotes;
 }
 $('#v-oggi').addEventListener('click',e=>{
   if(e.target.closest('.onotes')){onNoteClick(e);return;}
+  const wb=e.target.closest('[data-wid]');if(wb){const x=S.watch.find(y=>y.id===wb.dataset.wid);if(x)watchModal(x);return;}
   const b=e.target.closest('[data-oa]');if(b){const f=OACT[+b.dataset.oa];if(f)f();return;}
   const q=e.target.closest('[data-quick]');if(q)quickAdd(q.dataset.quick);
 });
@@ -2017,14 +2086,204 @@ $('#add-btn').onclick=()=>{
     <button style="--c:var(--nt)" data-q="lista">${ico('note')}Lista<span>Spesa, cose da comprare…</span></button>
     <button style="--c:var(--og)" data-q="abb">${ico('repeat')}Abbonamento<span>O una scadenza da ricordare</span></button>
     <button style="--c:var(--wl)" data-q="wish">${ico('star')}Desiderio<span>Da aggiungere alla wishlist</span></button>
+    <button style="--c:var(--wt)" data-q="watch">${ico('play')}Watchlist<span>Gioco, serie, film, libro…</span></button>
   </div>`);
-  DLG.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const k=b.dataset.q;closeModal();if(k==='wish')wishModal(null);else quickAdd(k);});
+  DLG.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const k=b.dataset.q;closeModal();if(k==='wish')wishModal(null);else if(k==='watch')watchModal(null);else quickAdd(k);});
 };
+
+/* ================= NOTIFICHE ================= */
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+let SWR=null;
+if('serviceWorker' in navigator&&location.protocol!=='file:'){navigator.serviceWorker.register('sw.js',{scope:'./'}).then(r=>{SWR=r;}).catch(()=>{});}
+try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
+const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const ub64=s=>{s=String(s).replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0));};
+const sha=async s=>b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)));
+const notifCfg=()=>({on:true,hour:8,abb:true,...((S.cfg&&S.cfg.notify)||{})});
+const pushSupported=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const myPushId=()=>{try{return localStorage.getItem('capri-push-id')||'';}catch(e){return'';}};
+const pushOnHere=()=>pushSupported()&&Notification.permission==='granted'&&!!myPushId()&&CACHE.push&&CACHE.push.has(myPushId());
+async function vapidKeys(){
+  const m=CACHE.pushkeys&&CACHE.pushkeys.get('vapid');
+  if(m&&m.publicKey&&m.privateKey)return m;
+  const kp=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
+  const pub=b64u(await crypto.subtle.exportKey('raw',kp.publicKey));
+  const jwk=await crypto.subtle.exportKey('jwk',kp.privateKey);
+  const k={publicKey:pub,privateKey:jwk.d,subject:'mailto:'+(EMAIL||'capri@example.com'),created:Date.now()};
+  await put('pushkeys/vapid',k);return k;
+}
+async function swReady(){if(SWR)return SWR;return Promise.race([navigator.serviceWorker.ready,sleep(8000).then(()=>{throw new Error('service worker non pronto');})]);}
+async function enableNotif(){
+  if(!pushSupported()){toast(isIOS&&!standalone()?'Su iPhone le notifiche funzionano solo aprendo Capri dall\'icona nella schermata Home.':'Questo browser non supporta le notifiche push.','err');return false;}
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){toast('Permesso non concesso. Puoi attivarlo da Impostazioni → Notifiche → Capri.','err');return false;}
+  try{
+    const reg=await swReady();const k=await vapidKeys();
+    let sub=await reg.pushManager.getSubscription();
+    if(sub){const cur=sub.options&&sub.options.applicationServerKey?b64u(sub.options.applicationServerKey):null;if(cur&&cur!==k.publicKey){await sub.unsubscribe();sub=null;}}
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:ub64(k.publicKey)});
+    const j=sub.toJSON();const id=(await sha(j.endpoint)).slice(0,24);
+    await put('push/'+id,{sub:j,dev:isIOS?'iPhone':(navigator.userAgentData&&navigator.userAgentData.platform)||'Browser',at:Date.now()});
+    try{localStorage.setItem('capri-push-id',id);}catch(e){}
+    await put('config/main',{...(S.cfg||{}),notify:{...notifCfg(),on:true}});
+    return true;
+  }catch(e){toast('Attivazione non riuscita: '+errMsg(e),'err');return false;}
+}
+async function disableNotif(){
+  try{const reg=await swReady();const sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe();}catch(e){}
+  const id=myPushId();if(id)await drop('push/'+id);try{localStorage.removeItem('capri-push-id');}catch(e){}
+}
+function previewDigest(){return CapriDigest.build({tickets:S.tickets,abb:S.abb,cfg:{...notifCfg(),name:cfg().name}},new Date());}
+async function testNotif(){
+  const p=previewDigest()||{title:'😈 Capri',body:'Nessun ticket aperto ✨ Così ti arriverà il riepilogo ogni giorno.'};
+  try{const reg=await swReady();await reg.showNotification(p.title,{body:p.body,icon:'icon-192.png',badge:'badge-96.png',tag:'capri-test',data:{url:'./#oggi'}});toast('Anteprima inviata','ok');}
+  catch(e){toast('Anteprima non riuscita: '+errMsg(e),'err');}
+}
+function notifModal(){
+  const n=notifCfg(),on=pushOnHere(),p=previewDigest(),devs=CACHE.push?CACHE.push.size:0;
+  const needInstall=isIOS&&!standalone();
+  openModal(`<div class="mh"><h2>Notifiche</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <p class="mini" style="margin:0 0 14px">Ogni giorno, all'ora che scegli, ricevi il riepilogo dei ticket: scaduti, in scadenza oggi e domani, critici, più le scadenze di abbonamenti e documenti.</p>
+  ${needInstall?`<div class="note-box" style="margin-bottom:14px;border-color:var(--u2)"><b>Prima un passaggio su iPhone</b><br>Le notifiche funzionano solo dall'app installata: in Safari tocca Condividi → “Aggiungi alla schermata Home”, poi apri Capri dall'icona e torna qui.</div>`:''}
+  <div class="notif-prev"><div class="np-app"><svg><use href="#i-logo"/></svg><span>CAPRI</span><small>ora</small></div><b>${esc(p?p.title:'😈 Capri')}</b><p>${esc(p?p.body:'Nessun ticket aperto ✨')}</p></div>
+  <div class="form" style="margin-top:16px">
+    <label class="f"><span>Ogni giorno alle</span><select id="nt-h">${Array.from({length:17},(_,i)=>i+6).map(h=>`<option value="${h}" ${n.hour===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('')}</select></label>
+    <label class="f row two"><input type="checkbox" id="nt-abb" ${n.abb!==false?'checked':''}><span>Includi abbonamenti e scadenze</span></label>
+  </div>
+  <p class="mini" style="margin-top:10px">${on?'✅ Attive su questo dispositivo.':'Non ancora attive su questo dispositivo.'}${devs?` Dispositivi iscritti: ${devs}.`:''} Il riepilogo può arrivare con qualche minuto di ritardo.</p>
+  <div class="mf">${on?'<button class="btn danger" id="nt-off" type="button">Disattiva qui</button>':''}<button class="btn ghost" id="nt-test" type="button" ${on?'':'hidden'}>Anteprima</button><span class="sp"></span><button class="btn pri" id="nt-on" type="button">${on?'Salva':'Attiva le notifiche'}</button></div>`);
+  const saveCfg=async()=>{const h=+$('#nt-h').value,abb=$('#nt-abb').checked;const cur=notifCfg();if(cur.hour!==h||cur.abb!==abb)await put('config/main',{...(S.cfg||{}),notify:{...cur,hour:h,abb}});};
+  $('#nt-on').onclick=async()=>{const b=$('#nt-on');b.disabled=true;await saveCfg();if(!on){b.textContent='Attivazione…';const ok=await enableNotif();if(ok){toast('Notifiche attive 😈','ok');closeModal();setTimeout(testNotif,400);renderOggi();return;}b.disabled=false;b.textContent='Attiva le notifiche';return;}closeModal();toast('Impostazioni salvate','ok');};
+  const t=$('#nt-test');if(t)t.onclick=testNotif;
+  const off=$('#nt-off');if(off)off.onclick=async()=>{if(!armed(off))return;await disableNotif();closeModal();toast('Notifiche disattivate su questo dispositivo','ok');renderOggi();};
+}
+
+/* ================= WATCHLIST ================= */
+const WT={game:{n:'Gioco',v:'Sto giocando',c:'#ff4fd8'},tv:{n:'Serie TV',v:'Sto guardando',c:'#4d8dff'},movie:{n:'Film',v:'Da vedere',c:'#ffb547'},book:{n:'Libro',v:'Sto leggendo',c:'#1fe08f'},anime:{n:'Anime',v:'Sto guardando',c:'#ff2d55'},manga:{n:'Manga e fumetti',v:'Sto leggendo',c:'#22d3ee'}};
+const WS={corso:{n:'In corso',c:'var(--u1)'},da:{n:'Da iniziare',c:'var(--tk)'},pausa:{n:'In pausa',c:'var(--u2)'},finito:{n:'Finito',c:'var(--wt)'},mollato:{n:'Abbandonato',c:'var(--dim)'}};
+const wsLabel=(x)=>x.status==='corso'?(WT[x.type]||WT.game).v.replace('Da vedere','Sto guardando'):WS[x.status||'da'].n;
+S.watch=[];S.wf2={status:'corso',type:'',q:''};
+const enc=encodeURIComponent;
+async function jget(u){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),9000);try{const r=await fetch(u,{headers:{Accept:'application/json'},signal:ctl.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json();}finally{clearTimeout(t);}}
+function jsonp(url){return new Promise((res,rej)=>{const cb='capri_cb_'+Math.random().toString(36).slice(2);const s=document.createElement('script');const done=()=>{clearTimeout(tm);try{delete window[cb];}catch(e){window[cb]=undefined;}s.remove();};const tm=setTimeout(()=>{done();rej(new Error('timeout'));},9000);window[cb]=d=>{done();res(d);};s.onerror=()=>{done();rej(new Error('rete'));};s.src=url+(url.includes('?')?'&':'?')+'callback='+cb;document.head.append(s);});}
+const https=u=>u?String(u).replace(/^http:\/\//,'https://'):'';
+async function wiki(q,suffix){
+  const d=await jget(`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${enc(q+(suffix?' '+suffix:''))}&gsrlimit=8&prop=pageimages&piprop=thumbnail&pithumbsize=600`);
+  const pages=Object.values((d.query&&d.query.pages)||{}).sort((a,b)=>(a.index||0)-(b.index||0));
+  return pages.filter(p=>p.thumbnail&&p.thumbnail.source).map(p=>({title:p.title.replace(/\s*\((video ?game|novel|film|TV series|manga|anime)[^)]*\)$/i,''),year:'',by:'',cover:p.thumbnail.source,link:'https://en.wikipedia.org/wiki/'+enc(p.title.replace(/ /g,'_'))}));
+}
+const SEARCH={
+  tv:async q=>(await jget('https://api.tvmaze.com/search/shows?q='+enc(q))).filter(x=>x.show).slice(0,10).map(x=>({title:x.show.name,year:(x.show.premiered||'').slice(0,4),by:(x.show.network&&x.show.network.name)||(x.show.webChannel&&x.show.webChannel.name)||'',cover:https(x.show.image&&(x.show.image.original||x.show.image.medium)),link:x.show.url})),
+  movie:async q=>{const d=await jsonp(`https://itunes.apple.com/search?term=${enc(q)}&media=movie&entity=movie&country=it&limit=12`);return(d.results||[]).map(x=>({title:x.trackName,year:(x.releaseDate||'').slice(0,4),by:x.artistName||'',cover:https(x.artworkUrl100?x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x900bb.'):''),link:x.trackViewUrl}));},
+  book:async q=>{const d=await jget(`https://openlibrary.org/search.json?q=${enc(q)}&limit=12&fields=title,author_name,first_publish_year,cover_i,key`);let r=(d.docs||[]).filter(x=>x.cover_i).map(x=>({title:x.title,year:String(x.first_publish_year||''),by:(x.author_name||[])[0]||'',cover:`https://covers.openlibrary.org/b/id/${x.cover_i}-L.jpg`,link:'https://openlibrary.org'+x.key}));
+    if(r.length<4){try{const g=await jget(`https://www.googleapis.com/books/v1/volumes?q=${enc(q)}&maxResults=10`);r=r.concat((g.items||[]).filter(i=>i.volumeInfo&&i.volumeInfo.imageLinks).map(i=>({title:i.volumeInfo.title,year:(i.volumeInfo.publishedDate||'').slice(0,4),by:(i.volumeInfo.authors||[])[0]||'',cover:https(i.volumeInfo.imageLinks.thumbnail).replace('&edge=curl','').replace('zoom=1','zoom=2'),link:i.volumeInfo.infoLink})));}catch(e){}}
+    return r;},
+  anime:async q=>((await jget(`https://api.jikan.moe/v4/anime?q=${enc(q)}&limit=10&sfw=true`)).data||[]).map(x=>({title:x.title_english||x.title,year:String(x.year||((x.aired&&x.aired.from)||'').slice(0,4)||''),by:((x.studios||[])[0]||{}).name||'',cover:(x.images&&((x.images.webp&&x.images.webp.large_image_url)||(x.images.jpg&&x.images.jpg.large_image_url)))||'',link:x.url,total:x.episodes||null})),
+  manga:async q=>((await jget(`https://api.jikan.moe/v4/manga?q=${enc(q)}&limit=10&sfw=true`)).data||[]).map(x=>({title:x.title_english||x.title,year:(((x.published&&x.published.from)||'')).slice(0,4),by:(((x.authors||[])[0]||{}).name||'').replace(/^(.*), (.*)$/,'$2 $1'),cover:(x.images&&((x.images.webp&&x.images.webp.large_image_url)||(x.images.jpg&&x.images.jpg.large_image_url)))||'',link:x.url,total:x.chapters||null})),
+  game:async q=>{let r=await wiki(q,'video game');if(r.length<2)r=r.concat(await wiki(q,''));return r;},
+};
+async function searchCovers(type,q){
+  let r=[];try{r=await (SEARCH[type]||SEARCH.game)(q);}catch(e){}
+  if(!r.filter(x=>x.cover).length){try{r=r.concat(await wiki(q,{tv:'TV series',movie:'film',book:'novel',anime:'anime',manga:'manga',game:''}[type]||''));}catch(e){}}
+  const seen=new Set();return r.filter(x=>x.cover&&!seen.has(x.cover)&&seen.add(x.cover)).slice(0,12);
+}
+const coverOf=x=>x.img?surl(x.img):x.cover||'';
+function wFiltered2(){
+  const f=S.wf2;let a=S.watch.slice();
+  if(f.status!=='tutti')a=a.filter(x=>(x.status||'da')===f.status);
+  if(f.type)a=a.filter(x=>x.type===f.type);
+  if(f.q){const q=f.q.toLowerCase();a=a.filter(x=>[x.title,x.by,x.note,x.platform].join(' ').toLowerCase().includes(q));}
+  const ord={corso:0,pausa:1,da:2,finito:3,mollato:4};
+  return a.sort((x,y)=>(ord[x.status||'da']-ord[y.status||'da'])||(y.upd||0)-(x.upd||0));
+}
+function stars(n){n=+n||0;return n?'<span class="stars">'+'★'.repeat(n)+'<i>'+'★'.repeat(5-n)+'</i></span>':'';}
+function wtCard(x,mini){
+  const t=WT[x.type]||WT.game,st=WS[x.status||'da'],cv=coverOf(x);
+  return`<button class="wt" data-wid="${esc(x.id)}" style="--c:${t.c};--s:${st.c}" type="button">
+    <span class="wt-img">${cv?`<img src="${esc(cv)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:''}<span class="wt-ph">${esc(String(x.title||'?').slice(0,1).toUpperCase())}</span></span>
+    ${mini?'':`<span class="wt-type">${esc(t.n)}</span>`}
+    <span class="wt-b"><span class="wt-st"><i></i>${esc(wsLabel(x))}</span><b>${esc(x.title||'Senza titolo')}</b>${mini?'':`<small>${esc([x.year,x.by,x.platform].filter(Boolean).join(' · '))}</small>`}${x.progress&&!mini?`<small class="wt-pr">${esc(x.progress)}</small>`:''}${+x.pct?`<span class="wt-bar"><i style="width:${clamp(+x.pct,0,100)}%"></i></span>`:''}${mini?'':stars(x.rating)}</span>
+  </button>`;
+}
+function renderWatch(){
+  const all=S.watch,inC=all.filter(x=>x.status==='corso'),todo=all.filter(x=>(x.status||'da')==='da'),y=String(new Date().getFullYear());
+  const fin=all.filter(x=>x.status==='finito'&&String(x.finished||'').startsWith(y));
+  $('#wt-stats').innerHTML=[[inC.length,'In corso','var(--u1)'],[todo.length,'Da iniziare','var(--tk)'],[fin.length,'Finiti nel '+y,'var(--wt)'],[all.length,'In totale','#fff']].map(([n,l,c])=>`<div class="stat static" style="--c:${c}"><b>${n}</b><span>${l}</span></div>`).join('');
+  const by=k=>inC.filter(x=>x.type===k).map(x=>x.title);
+  const bits=[];const g=by('game'),v=[...by('tv'),...by('movie'),...by('anime')],l=[...by('book'),...by('manga')];
+  const bj=a=>a.slice(0,2).map(t=>'<b>'+esc(t)+'</b>').join(' e ')+(a.length>2?` e altri ${a.length-2}`:'');
+  if(g.length)bits.push('giocando a '+bj(g));if(v.length)bits.push('guardando '+bj(v));if(l.length)bits.push('leggendo '+bj(l));
+  $('#wt-sum').innerHTML=bits.length?'Stai '+bits.join(', ').replace(/, ([^,]*)$/,' e $1')+'.':'Giochi, serie, film, libri, anime e manga: scrivi il titolo e la copertina la trova Capri.';
+  if(!S.ready)return;
+  const list=wFiltered2();
+  $('#wt-grid').innerHTML=list.length?list.map(x=>wtCard(x)).join(''):(all.length?`<div class="empty">${ico('search')}<b>Niente qui</b>Cambia i filtri qui sopra.</div>`:`<div class="empty">${ico('play')}<b>La watchlist è vuota</b>Aggiungi cosa stai giocando, guardando o leggendo: scrivi il titolo e scegli la copertina.</div>`);
+}
+$('#wt-grid').addEventListener('click',e=>{const b=e.target.closest('[data-wid]');if(!b)return;const x=S.watch.find(y=>y.id===b.dataset.wid);if(x)watchModal(x);});
+$('#wt-new').onclick=()=>watchModal(null);
+$('#wt-status').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.wf2.status=b.dataset.v;$$('#wt-status button').forEach(x=>x.classList.toggle('on',x===b));renderWatch();});
+$('#wt-type').innerHTML='<option value="">Tutti i tipi</option>'+Object.entries(WT).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
+$('#wt-type').addEventListener('change',e=>{S.wf2.type=e.target.value;renderWatch();});
+$('#wt-q').addEventListener('input',e=>{S.wf2.q=e.target.value.trim();renderWatch();});
+function watchModal(x){
+  const isNew=!x;const d=x?clone(x):{id:uid(),title:'',type:S.wf2.type||'game',status:'corso',cover:'',year:'',by:'',link:'',progress:'',pct:0,rating:0,platform:'',note:'',started:isoDay(),finished:'',created:Date.now()};
+  const ed={res:[],busy:0,seq:0};
+  openModal(`<div class="mh"><h2>${isNew?'Aggiungi alla watchlist':'Watchlist'}</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <div class="wtm">
+    <div class="wtm-cover" id="wm-cv"></div>
+    <form class="form" id="wmf" style="grid-template-columns:repeat(2,minmax(0,1fr))" autocomplete="off" onsubmit="return false">
+      <div class="f full"><span>Tipo</span><div class="chips">${Object.entries(WT).map(([k,v])=>`<label style="--c:${v.c}"><input type="radio" name="type" value="${k}" ${d.type===k?'checked':''}><b>${v.n}</b></label>`).join('')}</div></div>
+      <label class="f full"><span>Titolo</span><input name="title" value="${esc(d.title)}" maxlength="160" placeholder="Es. Elden Ring, Severance, Dune…" ${isNew?'autofocus':''} autocomplete="off"></label>
+      <label class="f"><span>Stato</span><select name="status">${Object.entries(WS).map(([k,v])=>`<option value="${k}" ${d.status===k?'selected':''}>${v.n}</option>`).join('')}</select></label>
+      <label class="f"><span>Piattaforma / dove</span><input name="platform" value="${esc(d.platform||'')}" maxlength="40" placeholder="PS5, Netflix, Kindle…"></label>
+      <label class="f"><span>A che punto sei</span><input name="progress" value="${esc(d.progress||'')}" maxlength="60" placeholder="Stagione 2 ep. 4 · pag. 120…"></label>
+      <label class="f"><span>Avanzamento ${'<b id="wm-pctv">'+(+d.pct||0)+'%</b>'}</span><input type="range" name="pct" min="0" max="100" step="5" value="${+d.pct||0}"></label>
+      <div class="f"><span>Voto</span><div class="rate" id="wm-rate">${[1,2,3,4,5].map(i=>`<button type="button" data-r="${i}" class="${i<=(+d.rating||0)?'on':''}" aria-label="${i} stelle">★</button>`).join('')}</div></div>
+      <label class="f"><span>Finito il</span><input type="date" name="finished" value="${esc(d.finished||'')}"></label>
+      <label class="f full"><span>Note</span><textarea name="note" rows="2" placeholder="Impressioni, con chi lo guardi, consigli…">${esc(d.note||'')}</textarea></label>
+    </form>
+  </div>
+  <div class="sec"><div class="sh"><h3>Copertina</h3><span class="mini" id="wm-msg"></span><label class="btn ghost sm"><input type="file" accept="image/*" hidden id="wm-file">Carica foto</label></div>
+    <div class="covers" id="wm-res"></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><input id="wm-url" placeholder="…oppure incolla il link di un'immagine" value=""><button class="btn sm ghost" id="wm-urlok" type="button">Usa</button></div></div>
+  <div class="mf">${isNew?'':'<button class="btn danger" id="wm-del" type="button">Elimina</button>'}<span class="sp"></span><button class="btn ghost" data-close type="button">Annulla</button><button class="btn pri" id="wm-ok" type="button">${isNew?'Aggiungi':'Salva'}</button></div>`,{wide:true});
+  const drawCover=()=>{const cv=coverOf(d);$('#wm-cv').innerHTML=cv?`<img src="${esc(cv)}" alt="" referrerpolicy="no-referrer">`:`<span>${ico('play')}<small>La copertina apparirà qui</small></span>`;};
+  const drawRes=()=>{$('#wm-res').innerHTML=ed.res.map((r,i)=>`<button type="button" class="cvr${!d.img&&d.cover===r.cover?' on':''}" data-ri="${i}" title="${esc(r.title)}"><img src="${esc(r.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"><span>${esc(r.title)}${r.year?` · ${esc(r.year)}`:''}</span></button>`).join('');};
+  S.redraw=drawCover;drawCover();
+  const typeNow=()=>(DLG.querySelector('[name=type]:checked')||{}).value||'game';
+  let tmr=null;
+  const runSearch=async(auto)=>{
+    const q=$('#wmf [name=title]').value.trim();if(q.length<2){$('#wm-msg').textContent='';ed.res=[];drawRes();return;}
+    const my=++ed.seq;$('#wm-msg').textContent='Cerco le copertine…';
+    const r=await searchCovers(typeNow(),q);if(my!==ed.seq||!$('#wm-res'))return;
+    ed.res=r;drawRes();$('#wm-msg').textContent=r.length?'Tocca quella giusta':'Nessuna copertina trovata: prova un titolo diverso o caricane una';
+    if(r.length&&!d.img&&(!d.cover||auto==='first')){const f=r[0];d.cover=f.cover;if(!d.year)d.year=f.year;if(!d.by)d.by=f.by;if(!d.link)d.link=f.link;drawCover();drawRes();}
+  };
+  $('#wmf [name=title]').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(()=>runSearch(isNew&&!d.img?'first':''),650);});
+  $$('#wmf [name=type]').forEach(r=>r.addEventListener('change',()=>{if($('#wmf [name=title]').value.trim())runSearch(isNew&&!d.img?'first':'');}));
+  if(!isNew&&d.title)runSearch('');
+  $('#wm-res').addEventListener('click',e=>{const b=e.target.closest('[data-ri]');if(!b)return;const r=ed.res[+b.dataset.ri];if(!r)return;if(d.img){ed.oldImg=ed.oldImg||d.img;d.img=null;}d.cover=r.cover;d.year=r.year||d.year;d.by=r.by||d.by;d.link=r.link||d.link;drawCover();drawRes();});
+  $('#wm-urlok').onclick=()=>{const u=$('#wm-url').value.trim();if(!/^https?:\/\//i.test(u)){toast('Incolla un link che inizi con https://','err');return;}if(d.img){ed.oldImg=ed.oldImg||d.img;d.img=null;}d.cover=u;drawCover();drawRes();};
+  $('#wm-file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;ed.busy=1;$('#wm-msg').textContent='Carico la foto…';try{const a=await uploadFile(f);if(d.img)ed.oldImg=ed.oldImg||d.img;d.img=a.p;drawCover();drawRes();$('#wm-msg').textContent='Foto caricata';}catch(err){toast('Foto non caricata: '+errMsg(err),'err');}ed.busy=0;};
+  $('#wmf [name=pct]').addEventListener('input',e=>{$('#wm-pctv').textContent=e.target.value+'%';});
+  $('#wm-rate').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(!b)return;const v=+b.dataset.r;d.rating=d.rating===v?0:v;$$('#wm-rate button').forEach(x=>x.classList.toggle('on',+x.dataset.r<=d.rating));});
+  $('#wmf [name=status]').addEventListener('change',e=>{if(e.target.value==='finito'&&!$('#wmf [name=finished]').value)$('#wmf [name=finished]').value=isoDay();if(e.target.value==='finito'&&+$('#wmf [name=pct]').value<100){$('#wmf [name=pct]').value=100;$('#wm-pctv').textContent='100%';}});
+  $('#wm-ok').onclick=async()=>{
+    const fd=new FormData($('#wmf'));d.title=String(fd.get('title')||'').trim();if(!d.title){toast('Scrivi il titolo','err');return;}
+    if(ed.busy){toast('Attendi il caricamento della foto','err');return;}
+    d.type=typeNow();d.status=String(fd.get('status')||'da');d.platform=String(fd.get('platform')||'').trim();d.progress=String(fd.get('progress')||'').trim();d.pct=+fd.get('pct')||0;d.finished=String(fd.get('finished')||'');d.note=String(fd.get('note')||'').trim();
+    if(d.status==='corso'&&!d.started)d.started=isoDay();d.upd=Date.now();
+    if(!d.cover&&!d.img&&ed.res[0])d.cover=ed.res[0].cover;
+    const b=body(d);closeModal();if(ed.oldImg&&ed.oldImg!==d.img)removeStored([ed.oldImg]);
+    if(await put('watch/'+d.id,b))toast(isNew?`${d.title} aggiunto`:'Salvato','ok');
+  };
+  const del=$('#wm-del');if(del)del.onclick=async()=>{if(!armed(del))return;const img=d.img;closeModal();if(await drop('watch/'+d.id)){toast('Eliminato','ok');removeStored([img]);}};
+}
 
 /* ================= MENU: backup, install, logout ================= */
 function backupData(){
   const out={app:'capri',version:1,exported:new Date().toISOString()};
-  for(const k in CACHE)out[k]=[...CACHE[k].entries()].map(([id,data])=>({id,data}));
+  for(const k in CACHE){if(/^push/.test(k))continue;out[k]=[...CACHE[k].entries()].map(([id,data])=>({id,data}));}
   return out;
 }
 $('#menu-btn').onclick=()=>{
@@ -2033,27 +2292,29 @@ $('#menu-btn').onclick=()=>{
   <p class="mut small" style="margin-top:0">Collegato come <b style="color:#fff">${esc(EMAIL)}</b></p>
   <div class="menu">
     <div style="display:flex;gap:8px"><input id="m-name" placeholder="Come ti chiamo?" value="${esc(cfg().name)}" maxlength="30" aria-label="Il tuo nome"><button class="btn" id="m-name-ok" type="button">Salva nome</button></div>
+    <button class="btn" id="m-notif" type="button">${ico('bell')}Notifiche giornaliere</button>
     <button class="btn" id="m-exp" type="button">Scarica backup completo (file .json)</button>
     <label class="btn" style="cursor:pointer"><input type="file" accept=".json,application/json" hidden id="m-imp">Ripristina da un backup</label>
     <div class="note-box"><b>Installa come app</b><br>${ios?'In Safari tocca Condividi, poi “Aggiungi alla schermata Home”.':'Nel menu del browser (⋮) scegli “Installa app” o “Aggiungi a schermata Home”.'} Capri si aprirà a schermo intero con la sua icona.</div>
-    <div class="note-box">Gli allegati restano nel tuo archivio Supabase: il backup contiene ticket, wishlist, spese, abbonamenti, note, fogli e impostazioni.</div>
+    <div class="note-box">Gli allegati restano nel tuo archivio Supabase: il backup contiene ticket, wishlist, watchlist, spese, abbonamenti, note, fogli e impostazioni.</div>
     <button class="btn danger" id="m-out" type="button">Esci</button>
   </div>`);
   $('#m-name-ok').onclick=async()=>{const n=$('#m-name').value.trim();await put('config/main',{...cfg(),name:n});toast('Nome salvato','ok');renderOggi();};
+  $('#m-notif').onclick=()=>{closeModal();notifModal();};
   $('#m-exp').onclick=()=>{saveBlob(`capri-backup-${isoDay()}.json`,new Blob([JSON.stringify(backupData(),null,1)],{type:'application/json'}));toast('Backup scaricato','ok');};
   $('#m-imp').onchange=async e=>{
     const f=e.target.files[0];e.target.value='';if(!f)return;
     let j;try{j=JSON.parse(await f.text());}catch(err){toast('File di backup non valido','err');return;}
     if(!j||j.app!=='capri'){toast('Questo non è un backup di Capri','err');return;}
     closeModal();let n=0;
-    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
+    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note','watch'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
     toast(`Ripristinati ${n} elementi`,'ok');
   };
-  $('#m-out').onclick=async()=>{await SB.auth.signOut();location.reload();};
+  $('#m-out').onclick=async()=>{await SB.auth.signOut();await authStorage.removeItem('capri-login-at');location.reload();};
 };
 
 /* ================= ROUTER + BOOT ================= */
-const VIEWS=['oggi','ticket','wishlist','finanze','note'];
+const VIEWS=['oggi','ticket','wishlist','watchlist','finanze','note'];
 const HALIAS={spese:['finanze','spese'],abbonamenti:['finanze','abb'],fogli:['finanze','fogli']};
 function route(){
   const hh=location.hash.slice(1);let v=hh;if(HALIAS[hh]){v=HALIAS[hh][0];S.fsub=HALIAS[hh][1];}
@@ -2062,7 +2323,8 @@ function route(){
   S.view=v;document.body.dataset.v=v;
   VIEWS.forEach(x=>{$('#v-'+x).hidden=x!==v;});
   $$('[data-nav]').forEach(a=>a.classList.toggle('on',a.dataset.nav===v));
-  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();
+  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();else if(v==='watchlist')renderWatch();
+  try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
   scrollTo(0,0);
 }
 addEventListener('hashchange',route);
@@ -2075,6 +2337,8 @@ SUBS.sheets=onSheets;
 SUBS.config=docs=>{const m=docs.find(d=>d.id==='main');S.cfg=m?clone(m.data):null;renderTickets();renderWish();renderOggi();finRefresh();};
 SUBS.spese=docs=>{S.spese=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi();finRefresh();};
 SUBS.abbonamenti=docs=>{S.abb=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi();finRefresh();};
+SUBS.watch=docs=>{S.watch=docs.map(d=>({...clone(d.data),id:d.id}));renderWatch();renderOggi();};
+SUBS.push=()=>{renderOggi();};
 SUBS.note=docs=>{S.notes=docs.map(d=>({...clone(d.data),id:d.id}));renderNotes();renderOggi();};
 
 const gate=$('#gate');
@@ -2093,6 +2357,7 @@ $('#g-login').addEventListener('submit',async e=>{
   const{data,error}=await SB.auth.signInWithPassword({email:$('#g-email').value.trim(),password:$('#g-pass').value});
   b.disabled=false;b.textContent='Entra';
   if(error){$('#g-err').textContent=/invalid/i.test(error.message)?'Email o password non corrette.':'Accesso non riuscito: '+error.message;return;}
+  await authStorage.setItem('capri-login-at',String(Date.now()));
   start(data.session);
 });
 async function start(session){
@@ -2100,7 +2365,7 @@ async function start(session){
   try{await loadAll();syncState();}
   catch(e){setSync('Archivio non raggiungibile','err');showErr(e);S.loaded={t:1,w:1,s:1};S.ready=true;renderTickets();renderWish();renderOggi();renderNotes();if(S.view==='finanze')renderFin();return;}
   $('#errbar').hidden=true;
-  S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();if(S.view==='finanze')renderFin();
+  S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();renderWatch();if(S.view==='finanze')renderFin();
   try{SB.channel('docs-'+UID).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'user_id=eq.'+UID},onRealtime).subscribe();}catch(e){}
   let lastLoad=Date.now();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastLoad>20000&&!pendN&&!dirty.size&&!S.ed){lastLoad=Date.now();loadAll().catch(()=>{});}});
@@ -2116,13 +2381,29 @@ function showErr(e){
 }
 $('#errbar-retry').onclick=async()=>{const b=$('#errbar-retry');b.disabled=true;b.textContent='Riprovo…';try{await loadAll();$('#errbar').hidden=true;syncState();toast('Dati caricati','ok');}catch(e){showErr(e);}b.disabled=false;b.textContent='Riprova';};
 $('#sync').addEventListener('click',()=>{const s=$('#sync');if(s.classList.contains('err')&&$('#errbar').hidden===false){$('#errbar').scrollIntoView({block:'center'});}else toast(s.title||'');});
+const IDB={p:null,open(){return this.p=this.p||new Promise(res=>{try{const r=indexedDB.open('capri',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(e){res(null);}});},
+  async run(mode,fn){const db=await this.open();if(!db)return null;return new Promise(res=>{try{const tx=db.transaction('kv',mode);const q=fn(tx.objectStore('kv'));tx.oncomplete=()=>res(q&&q.result!==undefined?q.result:null);tx.onerror=()=>res(null);}catch(e){res(null);}});},
+  get(k){return this.run('readonly',s=>s.get(k));},set(k,v){return this.run('readwrite',s=>s.put(v,k));},del(k){return this.run('readwrite',s=>s.delete(k));}};
+const authStorage={
+  async getItem(k){let v=null;try{v=localStorage.getItem(k);}catch(e){}if(v==null){v=await IDB.get(k);if(v!=null)try{localStorage.setItem(k,v);}catch(e){}}return v;},
+  async setItem(k,v){try{localStorage.setItem(k,v);}catch(e){}await IDB.set(k,v);},
+  async removeItem(k){try{localStorage.removeItem(k);}catch(e){}await IDB.del(k);}
+};
+const LOGIN_TTL=48*3600e3;
+async function loginAt(){const v=await authStorage.getItem('capri-login-at');return v?+v:0;}
 async function boot(){
   const C=getCfg();
   if(!C){gateShow('setup','');return;}
   if(!window.supabase||!window.supabase.createClient){gateShow('',"Non riesco a caricare i componenti di Capri: controlla la connessione e ricarica la pagina.");return;}
-  SB=window.supabase.createClient(C.url,C.key,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'capri-auth'}});
-  let session=null;try{({data:{session}}=await SB.auth.getSession());}catch(e){}
-  if(session)start(session);else gateShow('login','');
+  SB=window.supabase.createClient(C.url,C.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'capri-auth',storage:authStorage}});
+  let session=null;
+  for(let i=0;i<3&&!session;i++){try{const{data,error}=await SB.auth.getSession();session=data&&data.session;if(!session&&!error)break;}catch(e){}if(!session)await sleep(1200);}
+  if(session){
+    const at=await loginAt();
+    if(at&&Date.now()-at>LOGIN_TTL){try{await SB.auth.signOut();}catch(e){}gateShow('login','Sono passate 48 ore dall’ultimo accesso: entra di nuovo.');return;}
+    if(!at)await authStorage.setItem('capri-login-at',String(Date.now()));
+    start(session);
+  }else gateShow('login','');
 }
 boot();
 }

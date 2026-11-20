@@ -2,7 +2,7 @@
   "name": "Capri",
   "short_name": "Capri",
   "description": "Ticket, wishlist e finanze personali",
-  "start_url": "./#ticket",
+  "start_url": "./#oggi",
   "scope": "./",
   "display": "standalone",
   "background_color": "#08080a",

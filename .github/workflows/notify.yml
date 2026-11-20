@@ -1,0 +1,60 @@
+name: Notifiche Capri
+
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Invia subito il riepilogo, senza aspettare l’orario'
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/notify.yml'
+      - '.github/scripts/**'
+      - 'digest.js'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capri-notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Installa web-push
+        working-directory: .github/scripts
+        run: npm install --no-save --no-package-lock --no-audit --no-fund web-push@3
+      - name: Prova di funzionamento
+        run: node .github/scripts/notify.mjs
+        env:
+          SELFTEST: '1'
+      - name: Invia le notifiche
+        if: github.event_name != 'push'
+        run: node .github/scripts/notify.mjs
+        env:
+          SUPABASE_URL: https://vwprxhnprbbjfwgkrciy.supabase.co
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+      - name: Mantieni attiva la pianificazione
+        if: github.event_name == 'schedule'
+        run: |
+          f=.github/keepalive
+          last=$(cat "$f" 2>/dev/null || echo 0)
+          now=$(date +%s)
+          if [ $((now-last)) -gt 2592000 ]; then
+            echo "$now" > "$f"
+            git config user.name "capri-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$f" && git commit -m "keepalive" && git push
+          fi
