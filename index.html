@@ -413,6 +413,14 @@ input[type=range]{accent-color:var(--acc);padding:0;min-height:44px;background:n
 @keyframes breatheG{50%{filter:drop-shadow(0 0 6px var(--cpg)) drop-shadow(0 0 22px var(--cpg))}}
 .gcard .logo svg{color:var(--cpg)!important;filter:drop-shadow(0 0 4px var(--cpg)) drop-shadow(0 0 14px color-mix(in srgb,var(--cpg) 70%,transparent))!important;animation-name:breatheG!important}
 .np-app svg{color:var(--cpg)!important}
+.slots{display:grid;gap:10px}
+.slot{padding:12px;border-radius:16px;background:var(--p2);border:1px solid var(--line);display:grid;gap:10px;transition:border-color .15s}
+.slot.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.sl-top{display:flex;gap:8px;align-items:center}.sl-top .sl-h{width:110px;flex:none}.sl-top .sl-k{flex:1}
+.sl-days{display:flex;gap:6px;flex-wrap:wrap}
+.sl-days button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:transparent;color:var(--mut);font-weight:700;cursor:pointer}
+.sl-days button.on{background:var(--acc);border-color:var(--acc);color:#000}
+.sl-c{display:grid;gap:8px}
 /* gate */
 .gate{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:24px;background:radial-gradient(900px 500px at 50% -10%,color-mix(in srgb,var(--tk) 22%,transparent),transparent 65%),var(--bg);overflow:auto}
 .gcard{width:min(420px,100%);background:rgba(17,17,20,.9);border:1px solid var(--line2);border-radius:26px;padding:30px;box-shadow:0 40px 100px rgba(0,0,0,.7)}
@@ -2106,7 +2114,7 @@ try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e)
 const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const ub64=s=>{s=String(s).replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0));};
 const sha=async s=>b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)));
-const notifCfg=()=>({on:true,hour:8,abb:true,...((S.cfg&&S.cfg.notify)||{})});
+const notifCfg=()=>({on:true,...((S.cfg&&S.cfg.notify)||{})});
 const pushSupported=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
 const myPushId=()=>{try{return localStorage.getItem('capri-push-id')||'';}catch(e){return'';}};
 const pushOnHere=()=>pushSupported()&&Notification.permission==='granted'&&!!myPushId()&&CACHE.push&&CACHE.push.has(myPushId());
@@ -2132,7 +2140,7 @@ async function enableNotif(){
     const j=sub.toJSON();const id=(await sha(j.endpoint)).slice(0,24);
     await put('push/'+id,{sub:j,dev:isIOS?'iPhone':(navigator.userAgentData&&navigator.userAgentData.platform)||'Browser',at:Date.now()});
     try{localStorage.setItem('capri-push-id',id);}catch(e){}
-    await put('config/main',{...(S.cfg||{}),notify:{...notifCfg(),on:true}});
+    {const cur=(S.cfg&&S.cfg.notify)||{};if(cur.on===false)await put('config/main',{...(S.cfg||{}),notify:{...cur,on:true}});}
     return true;
   }catch(e){toast('Attivazione non riuscita: '+errMsg(e),'err');return false;}
 }
@@ -2140,28 +2148,64 @@ async function disableNotif(){
   try{const reg=await swReady();const sub=await reg.pushManager.getSubscription();if(sub)await sub.unsubscribe();}catch(e){}
   const id=myPushId();if(id)await drop('push/'+id);try{localStorage.removeItem('capri-push-id');}catch(e){}
 }
-function previewDigest(){return CapriDigest.build({tickets:S.tickets,abb:S.abb,cfg:{...notifCfg(),name:cfg().name}},new Date());}
-async function testNotif(){
-  const p=previewDigest()||{title:'☕️ Capri',body:'Nessun ticket aperto ✨ Così ti arriverà il riepilogo ogni giorno.'};
-  try{const reg=await swReady();await reg.showNotification(p.title,{body:p.body,icon:'icon-192.png',badge:'badge-96.png',tag:'capri-test',data:{url:'./#oggi'}});toast('Anteprima inviata','ok');}
+const DAYS=['L','M','M','G','V','S','D'];
+const notifData=()=>({tickets:S.tickets,abb:S.abb,spese:S.spese,cfg:{name:cfg().name,scats:cfg().scats,sbudget:cfg().sbudget}});
+function previewDigest(){const sl=CapriDigest.slots(notifCfg())[0];return CapriDigest.forSlot(sl,notifData(),new Date());}
+async function testNotif(slot){
+  const sl=slot||CapriDigest.slots(notifCfg())[0];
+  const p=CapriDigest.forSlot(sl,notifData(),new Date())||{title:'Capri',body:'Oggi questa notifica non partirebbe: non c\'è niente da segnalare ✨'};
+  try{const reg=await swReady();await reg.showNotification(p.title,{body:p.body,icon:'icon-192.png',badge:'badge-96.png',tag:'capri-test-'+(sl.id||''),data:{url:p.url||'./#oggi'}});toast('Anteprima inviata','ok');}
   catch(e){toast('Anteprima non riuscita: '+errMsg(e),'err');}
 }
 function notifModal(){
-  const n=notifCfg(),on=pushOnHere(),p=previewDigest(),devs=CACHE.push?CACHE.push.size:0;
-  const needInstall=isIOS&&!standalone();
+  const on=pushOnHere(),devs=CACHE.push?CACHE.push.size:0,needInstall=isIOS&&!standalone();
+  let list=clone(CapriDigest.slots(notifCfg())).map((x,i)=>({id:x.id||('s'+(i+1)),h:+x.h||0,kind:x.kind||'riepilogo',days:Array.isArray(x.days)?x.days:CapriDigest.ALL.slice(),title:x.title||'',text:x.text||''}));
+  let sel=0;
   openModal(`<div class="mh"><h2>Notifiche</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
-  <p class="mini" style="margin:0 0 14px">Ogni giorno, all'ora che scegli, ricevi il riepilogo dei ticket: scaduti, in scadenza oggi e domani, critici, più le scadenze di abbonamenti e documenti.</p>
+  <p class="mini" style="margin:0 0 14px">Decidi quante notifiche ricevere, a che ora, in quali giorni e cosa devono dirti. Le notifiche con i ticket o le scadenze partono solo se c'è qualcosa da segnalare.</p>
   ${needInstall?`<div class="note-box" style="margin-bottom:14px;border-color:var(--u2)"><b>Prima un passaggio su iPhone</b><br>Le notifiche funzionano solo dall'app installata: in Safari tocca Condividi → “Aggiungi alla schermata Home”, poi apri Capri dall'icona e torna qui.</div>`:''}
-  <div class="notif-prev"><div class="np-app"><svg><use href="#i-logo"/></svg><span>CAPRI</span><small>ora</small></div><b>${esc(p?p.title:'☕️ Capri')}</b><p>${esc(p?p.body:'Nessun ticket aperto ✨')}</p></div>
-  <div class="form" style="margin-top:16px">
-    <label class="f"><span>Ogni giorno alle</span><select id="nt-h">${Array.from({length:17},(_,i)=>i+6).map(h=>`<option value="${h}" ${n.hour===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('')}</select></label>
-    <label class="f row two"><input type="checkbox" id="nt-abb" ${n.abb!==false?'checked':''}><span>Includi abbonamenti e scadenze</span></label>
-  </div>
-  <p class="mini" style="margin-top:10px">${on?'✅ Attive su questo dispositivo.':'Non ancora attive su questo dispositivo.'}${devs?` Dispositivi iscritti: ${devs}.`:''} Il riepilogo può arrivare con qualche minuto di ritardo.</p>
-  <div class="mf">${on?'<button class="btn danger" id="nt-off" type="button">Disattiva qui</button>':''}<button class="btn ghost" id="nt-test" type="button" ${on?'':'hidden'}>Anteprima</button><span class="sp"></span><button class="btn pri" id="nt-on" type="button">${on?'Salva':'Attiva le notifiche'}</button></div>`);
-  const saveCfg=async()=>{const h=+$('#nt-h').value,abb=$('#nt-abb').checked;const cur=notifCfg();if(cur.hour!==h||cur.abb!==abb)await put('config/main',{...(S.cfg||{}),notify:{...cur,hour:h,abb}});};
-  $('#nt-on').onclick=async()=>{const b=$('#nt-on');b.disabled=true;await saveCfg();if(!on){b.textContent='Attivazione…';const ok=await enableNotif();if(ok){toast('Notifiche attive ✨','ok');closeModal();setTimeout(testNotif,400);renderOggi();return;}b.disabled=false;b.textContent='Attiva le notifiche';return;}closeModal();toast('Impostazioni salvate','ok');};
-  const t=$('#nt-test');if(t)t.onclick=testNotif;
+  <div id="sl-list" class="slots"></div>
+  <button class="btn ghost sm" id="sl-add" type="button" style="margin-top:10px">${ico('plus')}Aggiungi una notifica</button>
+  <h3 style="margin:20px 0 8px;font-size:15px">Anteprima</h3>
+  <div class="notif-prev" id="sl-prev"></div>
+  <p class="mini" style="margin-top:10px">${on?'✅ Attive su questo dispositivo.':'Non ancora attive su questo dispositivo.'}${devs?` Dispositivi iscritti: ${devs}.`:''} Possono arrivare con qualche minuto di ritardo rispetto all'ora scelta.</p>
+  <div class="mf">${on?'<button class="btn danger" id="nt-off" type="button">Disattiva qui</button><button class="btn ghost" id="nt-test" type="button">Prova sul telefono</button>':''}<span class="sp"></span><button class="btn pri" id="nt-on" type="button">${on?'Salva':'Salva e attiva'}</button></div>`,{wide:true});
+  const kindOpts=k=>Object.entries(CapriDigest.KINDS).map(([v,n])=>`<option value="${v}" ${k===v?'selected':''}>${esc(n)}</option>`).join('');
+  const drawPrev=()=>{const sl=list[sel]||list[0];const el=$('#sl-prev');if(!el)return;if(!sl){el.innerHTML='<p class="mini" style="margin:0">Nessuna notifica impostata: non riceverai niente.</p>';return;}
+    const p=CapriDigest.forSlot(sl,notifData(),new Date());
+    el.innerHTML=`<div class="np-app"><svg><use href="#i-logo"/></svg><span>CAPRI</span><small>${String(sl.h).padStart(2,'0')}:00</small></div>`+(p?`<b>${esc(p.title)}</b><p>${esc(p.body)}</p>`:`<p class="mini" style="margin:0">Oggi questa non partirebbe: non c'è niente da segnalare ✨</p>`);};
+  const draw=()=>{
+    $('#sl-list').innerHTML=list.map((x,i)=>`<div class="slot${i===sel?' on':''}" data-i="${i}">
+      <div class="sl-top"><select class="sl-h" aria-label="Ora">${Array.from({length:24},(_,h)=>`<option value="${h}" ${x.h===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('')}</select>
+      <select class="sl-k" aria-label="Contenuto">${kindOpts(x.kind)}</select>
+      <button class="btn sm ghost sl-del" type="button" aria-label="Elimina questa notifica">×</button></div>
+      <div class="sl-days" role="group" aria-label="Giorni">${DAYS.map((d,j)=>`<button type="button" class="${x.days.includes(j)?'on':''}" data-d="${j}" aria-pressed="${x.days.includes(j)}">${d}</button>`).join('')}</div>
+      ${x.kind==='custom'?`<div class="sl-c"><input class="sl-t" maxlength="60" placeholder="Titolo, es. 💧 Pausa acqua" value="${esc(x.title)}"><input class="sl-x" maxlength="160" placeholder="Testo, es. Bevi un bicchiere d'acqua" value="${esc(x.text)}"></div>`:''}
+    </div>`).join('')||'<p class="mini">Nessuna notifica. Aggiungine una qui sotto.</p>';
+    $('#sl-add').hidden=list.length>=8;drawPrev();
+  };
+  draw();
+  const row=e=>{const r=e.target.closest('.slot');return r?+r.dataset.i:-1;};
+  $('#sl-list').addEventListener('change',e=>{const i=row(e);if(i<0)return;sel=i;const x=list[i];
+    if(e.target.classList.contains('sl-h'))x.h=+e.target.value;
+    if(e.target.classList.contains('sl-k')){x.kind=e.target.value;draw();return;}
+    drawPrev();$$('#sl-list .slot').forEach((r,j)=>r.classList.toggle('on',j===sel));});
+  $('#sl-list').addEventListener('input',e=>{const i=row(e);if(i<0)return;sel=i;const x=list[i];if(e.target.classList.contains('sl-t'))x.title=e.target.value;if(e.target.classList.contains('sl-x'))x.text=e.target.value;drawPrev();});
+  $('#sl-list').addEventListener('click',e=>{const i=row(e);if(i<0)return;
+    if(e.target.closest('.sl-del')){list.splice(i,1);sel=Math.max(0,Math.min(sel,list.length-1));draw();return;}
+    const d=e.target.closest('[data-d]');if(d){const x=list[i],j=+d.dataset.d;x.days=x.days.includes(j)?x.days.filter(k=>k!==j):[...x.days,j].sort();if(!x.days.length){x.days=[j];toast('Serve almeno un giorno','err');}}
+    if(sel!==i||d){sel=i;draw();}});
+  $('#sl-add').onclick=()=>{const used=new Set(list.map(x=>x.h));let h=[8,13,18,21,10,15,20,12].find(v=>!used.has(v));if(h===undefined)h=9;list.push({id:'s'+uid().slice(-6),h,kind:list.length?'custom':'riepilogo',days:CapriDigest.ALL.slice(),title:'',text:''});sel=list.length-1;draw();};
+  const saveCfg=async()=>{
+    for(const x of list)if(x.kind==='custom'&&!x.title.trim()&&!x.text.trim()){toast('Scrivi il testo del messaggio personale','err');return false;}
+    list.sort((a,b)=>a.h-b.h);
+    await put('config/main',{...(S.cfg||{}),notify:{on:true,slots:list.map(x=>({id:x.id,h:x.h,kind:x.kind,days:x.days,...(x.kind==='custom'?{title:x.title.trim(),text:x.text.trim()}:{})}))}});
+    return true;
+  };
+  $('#nt-on').onclick=async()=>{const b=$('#nt-on');b.disabled=true;if(!await saveCfg()){b.disabled=false;return;}
+    if(!on){b.textContent='Attivazione…';const ok=await enableNotif();if(ok){toast('Notifiche attive ✨','ok');closeModal();setTimeout(()=>testNotif(list[0]),400);renderOggi();return;}b.disabled=false;b.textContent='Salva e attiva';return;}
+    closeModal();toast('Notifiche salvate','ok');};
+  const t=$('#nt-test');if(t)t.onclick=()=>testNotif(list[sel]||list[0]);
   const off=$('#nt-off');if(off)off.onclick=async()=>{if(!armed(off))return;await disableNotif();closeModal();toast('Notifiche disattivate su questo dispositivo','ok');renderOggi();};
 }
 

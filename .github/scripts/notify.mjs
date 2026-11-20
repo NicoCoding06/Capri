@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { webcrypto, createECDH, randomBytes } from 'node:crypto';
 
 await import(new URL('../../digest.js', import.meta.url).href);
-const { build, rome } = globalThis.CapriDigest;
+const { build, forSlot, slots: slotsOf, rome, ALL } = globalThis.CapriDigest;
 
 const SELFTEST = process.env.SELFTEST === '1';
 const MOCK = process.env.MOCK_FILE || '';
@@ -36,6 +36,12 @@ async function selftest() {
     cfg: { name: 'Nico' },
   }, new Date());
   if (!payload || !payload.title || !payload.body.includes('Rinnovo passaporto')) throw new Error('riepilogo non valido');
+  const data = { tickets: [{ title: 'Bolletta', urg: 3, due: day(0), status: 'aperto' }], abb: [{ name: 'Palestra', amt: 30, next: day(1) }], spese: [{ d: rome(new Date()).today, amt: 12.5 }], cfg: { name: 'Nico', sbudget: 1000 } };
+  for (const kind of ['riepilogo', 'ticket', 'scadenze', 'spese', 'custom']) {
+    const p = forSlot({ id: 'x', kind, title: 'Bevi acqua', text: '💧 Un bicchiere adesso' }, data, new Date());
+    if (!p || !p.title) throw new Error('notifica ' + kind + ' non valida');
+    console.log('[' + kind + '] ' + p.title + ' | ' + p.body.replace(/\n/g, ' / '));
+  }
   const req = webpush.generateRequestDetails(sub, JSON.stringify(payload), {
     vapidDetails: { subject: 'mailto:test@example.com', publicKey: pub, privateKey: priv }, TTL: 3600,
   });
@@ -58,7 +64,7 @@ async function loadRows() {
   if (MOCK) return JSON.parse(readFileSync(MOCK, 'utf8'));
   const rows = [];
   for (let off = 0; ; off += 1000) {
-    const page = await rest(`docs?select=user_id,coll,id,data&coll=in.(push,pushkeys,pushstate,tickets,abbonamenti,config)&order=user_id,coll,id&limit=1000&offset=${off}`);
+    const page = await rest(`docs?select=user_id,coll,id,data&coll=in.(push,pushkeys,pushstate,tickets,abbonamenti,spese,config)&order=user_id,coll,id&limit=1000&offset=${off}`);
     rows.push(...page); if (page.length < 1000) break;
   }
   return rows;
@@ -82,43 +88,55 @@ async function main() {
   const rows = await loadRows();
   const users = new Map();
   for (const r of rows) {
-    if (!users.has(r.user_id)) users.set(r.user_id, { push: [], tickets: [], abbonamenti: [], config: {}, pushkeys: {}, pushstate: {} });
+    if (!users.has(r.user_id)) users.set(r.user_id, { push: [], tickets: [], abbonamenti: [], spese: [], config: {}, pushkeys: {}, pushstate: {} });
     const u = users.get(r.user_id);
     if (Array.isArray(u[r.coll])) u[r.coll].push({ ...(r.data || {}), _id: r.id }); else if (u[r.coll]) u[r.coll][r.id] = r.data || {};
   }
-  const now = new Date(); const { today, hour } = rome(now);
+  const now = process.env.NOW ? new Date(process.env.NOW) : new Date(); const { today, hour, dow } = rome(now);
   let sent = 0;
   for (const [uid, u] of users) {
     const keys = u.pushkeys.vapid;
     if (!u.push.length || !keys || !keys.publicKey || !keys.privateKey) continue;
     const conf = u.config.main || {};
-    const notify = { on: true, hour: 8, abb: true, ...(conf.notify || {}) };
+    const notify = { on: true, ...(conf.notify || {}) };
+    if (notify.on === false && !FORCE) continue;
     const state = u.pushstate.daily || {};
-    if (!FORCE) {
-      if (notify.on === false) continue;
-      if (hour < notify.hour || state.last === today) continue;
+    const sentMap = { ...(state.sent || {}) };
+    if (state.last === today && !state.sent) sentMap.s1 = today;
+    const list = slotsOf(notify);
+    let toSend = [];
+    if (FORCE) toSend = list;
+    else {
+      const due = list.filter((sl) => (sl.days || ALL).includes(dow) && +sl.h <= hour && sentMap[sl.id] !== today);
+      const fresh = due.filter((sl) => hour - +sl.h <= 2);
+      const top = Math.max(-1, ...fresh.map((sl) => +sl.h));
+      toSend = fresh.filter((sl) => +sl.h === top);
+      due.forEach((sl) => { sentMap[sl.id] = today; });
+      if (!due.length) continue;
     }
-    const payload = build({ tickets: u.tickets, abb: u.abbonamenti, cfg: { ...notify, name: conf.name } }, now);
+    const data = { tickets: u.tickets, abb: u.abbonamenti, spese: u.spese, cfg: { name: conf.name, scats: conf.scats, sbudget: conf.sbudget } };
     let ok = 0;
-    if (payload) {
+    for (const sl of toSend) {
+      const payload = forSlot(sl, data, now);
+      if (!payload) continue;
       for (const p of u.push) {
         if (!p.sub || !p.sub.endpoint) continue;
-        if (MOCK) { console.log('[mock] invio a', p.dev || p._id, '\n' + payload.title + '\n' + payload.body); ok++; continue; }
+        if (MOCK) { console.log('[mock] invio a', p.dev || p._id, '(' + (sl.kind || 'riepilogo') + ' ore ' + sl.h + ')\n' + payload.title + '\n' + payload.body); ok++; continue; }
         try {
           await send.sendNotification(p.sub, JSON.stringify(payload), {
             vapidDetails: { subject: keys.subject || 'mailto:capri@example.com', publicKey: keys.publicKey, privateKey: keys.privateKey },
-            TTL: 6 * 3600, urgency: 'normal', topic: 'capri-daily',
+            TTL: 3 * 3600, urgency: 'normal',
           });
           ok++;
         } catch (e) {
           console.log(`Invio non riuscito (${e.statusCode || '?'}): ${String(e.body || e.message).slice(0, 200)}`);
-          if (e.statusCode === 404 || e.statusCode === 410) await dropSub(uid, p._id);
+          if (e.statusCode === 404 || e.statusCode === 410) { await dropSub(uid, p._id); p.sub = null; }
         }
       }
     }
     sent += ok;
-    await saveState(uid, { last: today, at: now.toISOString(), sent: ok, empty: !payload });
+    if (!FORCE) await saveState(uid, { sent: sentMap, at: now.toISOString(), count: ok });
   }
-  console.log(`Fatto: ${sent} notifiche inviate (${today}, ore ${hour} a Roma).`);
+  console.log(`Fatto: ${sent} notifiche inviate (${today}, ore ${hour} a Roma, giorno ${dow}).`);
 }
 main().catch((e) => { console.error(e); process.exit(1); });
