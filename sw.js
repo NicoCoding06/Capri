@@ -5,7 +5,7 @@ self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim(
 self.addEventListener('push', function (e) {
   var d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: 'Capri', body: e.data ? e.data.text() : '' }; }
-  var title = d.title || '😈 Capri';
+  var title = d.title || 'Capri';
   var opts = {
     body: d.body || '',
     icon: 'icon-192.png',

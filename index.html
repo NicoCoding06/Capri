@@ -2136,7 +2136,7 @@ async function disableNotif(){
 }
 function previewDigest(){return CapriDigest.build({tickets:S.tickets,abb:S.abb,cfg:{...notifCfg(),name:cfg().name}},new Date());}
 async function testNotif(){
-  const p=previewDigest()||{title:'😈 Capri',body:'Nessun ticket aperto ✨ Così ti arriverà il riepilogo ogni giorno.'};
+  const p=previewDigest()||{title:'☕️ Capri',body:'Nessun ticket aperto ✨ Così ti arriverà il riepilogo ogni giorno.'};
   try{const reg=await swReady();await reg.showNotification(p.title,{body:p.body,icon:'icon-192.png',badge:'badge-96.png',tag:'capri-test',data:{url:'./#oggi'}});toast('Anteprima inviata','ok');}
   catch(e){toast('Anteprima non riuscita: '+errMsg(e),'err');}
 }
@@ -2146,7 +2146,7 @@ function notifModal(){
   openModal(`<div class="mh"><h2>Notifiche</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
   <p class="mini" style="margin:0 0 14px">Ogni giorno, all'ora che scegli, ricevi il riepilogo dei ticket: scaduti, in scadenza oggi e domani, critici, più le scadenze di abbonamenti e documenti.</p>
   ${needInstall?`<div class="note-box" style="margin-bottom:14px;border-color:var(--u2)"><b>Prima un passaggio su iPhone</b><br>Le notifiche funzionano solo dall'app installata: in Safari tocca Condividi → “Aggiungi alla schermata Home”, poi apri Capri dall'icona e torna qui.</div>`:''}
-  <div class="notif-prev"><div class="np-app"><svg><use href="#i-logo"/></svg><span>CAPRI</span><small>ora</small></div><b>${esc(p?p.title:'😈 Capri')}</b><p>${esc(p?p.body:'Nessun ticket aperto ✨')}</p></div>
+  <div class="notif-prev"><div class="np-app"><svg><use href="#i-logo"/></svg><span>CAPRI</span><small>ora</small></div><b>${esc(p?p.title:'☕️ Capri')}</b><p>${esc(p?p.body:'Nessun ticket aperto ✨')}</p></div>
   <div class="form" style="margin-top:16px">
     <label class="f"><span>Ogni giorno alle</span><select id="nt-h">${Array.from({length:17},(_,i)=>i+6).map(h=>`<option value="${h}" ${n.hour===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('')}</select></label>
     <label class="f row two"><input type="checkbox" id="nt-abb" ${n.abb!==false?'checked':''}><span>Includi abbonamenti e scadenze</span></label>
@@ -2154,7 +2154,7 @@ function notifModal(){
   <p class="mini" style="margin-top:10px">${on?'✅ Attive su questo dispositivo.':'Non ancora attive su questo dispositivo.'}${devs?` Dispositivi iscritti: ${devs}.`:''} Il riepilogo può arrivare con qualche minuto di ritardo.</p>
   <div class="mf">${on?'<button class="btn danger" id="nt-off" type="button">Disattiva qui</button>':''}<button class="btn ghost" id="nt-test" type="button" ${on?'':'hidden'}>Anteprima</button><span class="sp"></span><button class="btn pri" id="nt-on" type="button">${on?'Salva':'Attiva le notifiche'}</button></div>`);
   const saveCfg=async()=>{const h=+$('#nt-h').value,abb=$('#nt-abb').checked;const cur=notifCfg();if(cur.hour!==h||cur.abb!==abb)await put('config/main',{...(S.cfg||{}),notify:{...cur,hour:h,abb}});};
-  $('#nt-on').onclick=async()=>{const b=$('#nt-on');b.disabled=true;await saveCfg();if(!on){b.textContent='Attivazione…';const ok=await enableNotif();if(ok){toast('Notifiche attive 😈','ok');closeModal();setTimeout(testNotif,400);renderOggi();return;}b.disabled=false;b.textContent='Attiva le notifiche';return;}closeModal();toast('Impostazioni salvate','ok');};
+  $('#nt-on').onclick=async()=>{const b=$('#nt-on');b.disabled=true;await saveCfg();if(!on){b.textContent='Attivazione…';const ok=await enableNotif();if(ok){toast('Notifiche attive ✨','ok');closeModal();setTimeout(testNotif,400);renderOggi();return;}b.disabled=false;b.textContent='Attiva le notifiche';return;}closeModal();toast('Impostazioni salvate','ok');};
   const t=$('#nt-test');if(t)t.onclick=testNotif;
   const off=$('#nt-off');if(off)off.onclick=async()=>{if(!armed(off))return;await disableNotif();closeModal();toast('Notifiche disattivate su questo dispositivo','ok');renderOggi();};
 }

@@ -52,7 +52,8 @@
       ? act.length + ' ' + plural(act.length, 'ticket aperto', 'ticket aperti') + (late ? ' · ' + late + ' ' + plural(late, 'scaduto', 'scaduti') : '') + (!hot.length ? ' · niente di urgente ✨' : '')
       : 'Nessun ticket aperto ✨';
     var body = [head].concat(lines, rest > 0 && lines.length ? ['+ ' + rest + ' ' + plural(rest, 'altro', 'altri')] : [], abbLines).join('\n');
-    return { title: '😈 ' + greet + (name ? ', ' + name : ''), body: body, badge: late + todayN, tag: 'capri-daily', url: './#oggi', today: today };
+    var icon = h < 5 ? '🌙' : h < 11 ? '☕️' : h < 18 ? '☀️' : '🌙';
+    return { title: icon + ' ' + greet + (name ? ', ' + name : ''), body: body, badge: late + todayN, tag: 'capri-daily', url: './#oggi', today: today };
   }
   g.CapriDigest = { build: build, rome: rome };
 })(typeof window !== 'undefined' ? window : globalThis);
