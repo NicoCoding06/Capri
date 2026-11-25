@@ -24,7 +24,9 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
   base64url 32 caratteri), tunnel `cloudflared` (trycloudflare.com) e segnale ogni minuto con `capri_music` (`musica/capri_music.sql`).
   `musica/Avvia Capri Musica.bat`: trova (o installa con winget) Python e avvia il programma senza finestre con
   `--cartella <Musica> --imposta-avvio --avvio`, scrivendo `installazione.txt` accanto a sé.
-  Android: gira in Termux (cloudflared da `pkg`, wake lock, avvio con Termux:Boot); chiave e indirizzi passati con
+  Codice brano = sha1(artista|album|titolo|n) dai tag, altrimenti (nome file|misura): uguale su ogni dispositivo.
+  Salta cartelle non musicali (WhatsApp, Android, suonerie, registrazioni…) e file < 150 KB.
+  Android: gira in Termux (cartella predefinita: tutta la memoria `~/storage/shared`) (cloudflared da `pkg`, wake lock, avvio con Termux:Boot); chiave e indirizzi passati con
   `--chiave --supabase --pk --sito` e salvati in config. Con più dispositivi `capri_music` tiene il primo attivo
   (risponde `active:false, busy:<nome>` agli altri) finché non tace per 150 s. Restituisce anche `del` (brani eliminati da Capri):
   ogni dispositivo li sposta in `<cartella>/.capri-cestino/` (indice `cestino.json`), li rimette a posto se tolti dall'elenco

@@ -26,6 +26,10 @@ EXTS = {".mp3", ".m4a", ".aac", ".flac", ".ogg", ".oga", ".opus", ".wav"}
 MIME = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".flac": "audio/flac", ".ogg": "audio/ogg",
         ".oga": "audio/ogg", ".opus": "audio/ogg", ".wav": "audio/wav"}
 COVERS = ("cover", "folder", "front", "album", "copertina")
+# Cartelle che non contengono musica (chat, registrazioni, suonerie, sistema): saltate ovunque
+SKIP_DIRS = {"android", "whatsapp", "telegram", "signal", "notifications", "ringtones", "alarms", "recordings", "call",
+             "callrecord", "call recordings", "voice recorder", "sounds", "audiobooks", "podcasts", "$recycle.bin", "system volume information"}
+MIN_SIZE = 150 * 1024  # sotto questa misura è un suono o un vocale, non una canzone
 IS_WIN = os.name == "nt"
 IS_TERMUX = "com.termux" in os.environ.get("PREFIX", "")
 DEVICE = {"name": socket.gethostname()}
@@ -84,7 +88,7 @@ def default_music_dir():
     home = os.path.expanduser("~")
     cands = [os.path.join(home, "Music"), os.path.join(home, "Musica")]
     if IS_TERMUX:
-        cands = [os.path.join(home, "storage", "shared", "Music"), os.path.join(home, "storage", "music")] + cands
+        cands = [os.path.join(home, "storage", "shared")] + cands
     for c in cands:
         if os.path.isdir(c):
             return c
@@ -441,7 +445,7 @@ class Library:
                 log("⚠ Cartella non trovata:", root)
                 continue
             for d, dirs, files in os.walk(root):
-                dirs[:] = sorted(x for x in dirs if not x.startswith(".") and not x.startswith("$"))
+                dirs[:] = sorted(x for x in dirs if not x.startswith(".") and not x.startswith("$") and x.lower() not in SKIP_DIRS)
                 for fn in files:
                     ext = os.path.splitext(fn)[1].lower()
                     if ext not in EXTS or fn.startswith("._"):
@@ -451,7 +455,7 @@ class Library:
                         st = os.stat(p)
                     except OSError:
                         continue
-                    if st.st_size < 1024:
+                    if st.st_size < MIN_SIZE:
                         continue
                     rel = os.path.relpath(p, root)
                     key = p + "|" + str(int(st.st_mtime)) + "|" + str(st.st_size)
@@ -464,10 +468,20 @@ class Library:
                         g_t, g_a, g_al = guess_from_name(p, root)
                         info = {"t": tags.get("t") or g_t, "a": tags.get("a") or g_a or "Artista sconosciuto",
                                 "al": tags.get("al") or g_al or "", "aa": tags.get("aa", ""), "n": _num(tags.get("n")),
-                                "dn": _num(tags.get("dn")), "y": (tags.get("y") or "")[:4], "d": dur, "pic": 1 if tags.get("pic") else 0}
+                                "dn": _num(tags.get("dn")), "y": (tags.get("y") or "")[:4], "d": dur, "pic": 1 if tags.get("pic") else 0,
+                                "tg": 1 if tags.get("t") else 0}
                         parsed += 1
                     new_cache[key] = info
-                    i = self.tid(os.path.basename(root) + "/" + rel)
+                    # codice uguale su ogni dispositivo: dai tag del brano, altrimenti da nome e misura del file
+                    if info.get("tg"):
+                        base = "|".join(str(info.get(k) or "") for k in ("a", "al", "t", "n")).lower()
+                    else:
+                        base = fn.lower() + "|" + str(st.st_size)
+                    i = self.tid(base)
+                    k = 2
+                    while i in tracks:
+                        i = self.tid(base + "#" + str(k))
+                        k += 1
                     tr = dict(info)
                     tr.update({"i": i, "f": ext[1:], "m": int(st.st_mtime), "s": st.st_size})
                     if not tr["pic"] and folder_cover(d):

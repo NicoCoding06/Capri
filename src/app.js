@@ -1739,7 +1739,7 @@ async function muSetupModal(){
   <details class="ip-more" style="margin-top:14px"><summary><b>Hai un tablet Android da lasciare acceso?</b> Può fare da “PC” al posto suo (consuma molto meno).</summary>
     <div class="ip" style="margin-top:12px">
       <div class="ip-step"><div class="ip-n">1</div><div><b>Installa Termux e Termux:Boot</b><p>Dal tablet, da F-Droid: <a href="https://f-droid.org/packages/com.termux/" target="_blank" rel="noopener">Termux</a> e <a href="https://f-droid.org/packages/com.termux.boot/" target="_blank" rel="noopener">Termux:Boot</a> (apri Termux:Boot una volta, così parte da solo all'accensione).</p></div></div>
-      <div class="ip-step"><div class="ip-n">2</div><div><b>Copia le canzoni</b><p>Mettile nella cartella <b>Music</b> del tablet (dal PC col cavo USB). Con la stessa struttura di cartelle del PC, playlist e “Mi piace” restano validi.</p></div></div>
+      <div class="ip-step"><div class="ip-n">2</div><div><b>Copia le canzoni</b><p>Va bene ovunque siano sul tablet (Music, Download…): il programma le trova da solo e salta chat, registrazioni e suonerie.</p></div></div>
       <div class="ip-step"><div class="ip-n">3</div><div><b>Incolla un comando in Termux</b><p>Copia, incolla in Termux e premi Invio. Quando Android chiede il permesso per i file, tocca <b>Consenti</b>.</p>
         <div class="ip-b"><button class="btn sm pri" type="button" id="mu-android">Copia il comando per Android</button></div></div></div>
       <div class="ip-step"><div class="ip-n">4</div><div><b>Non farlo addormentare</b><p>Impostazioni di Android → App → Termux → Batteria → <b>Senza restrizioni</b>. Lascia il tablet in carica.</p></div></div>
@@ -1758,7 +1758,7 @@ async function muSetupModal(){
     if(/= "__[A-Z]+__"/.test(txt))throw new Error('modello del programma non riconosciuto');
     saveBlob('capri-musica.py',new Blob([txt],{type:'text/x-python'}));toast('Scaricato: aprilo sul PC','ok');}catch(e){toast('Errore: '+errMsg(e),'err');}b.disabled=false;};
   $('#mu-android').onclick=async()=>{try{if(!key)key=await muNewKey();const C=getCfg()||{},q=v=>"'"+String(v).replace(/'/g,"'\\''")+"'";
-    const cmd=`pkg install -y python cloudflared && termux-setup-storage; curl -fsSL ${q(SITE_URL()+'musica/capri-musica.py')} -o ~/capri-musica.py && python ~/capri-musica.py --chiave ${q(key)} --supabase ${q(C.url||'')} --pk ${q(C.key||'')} --sito ${q(SITE_URL())} --cartella ~/storage/shared/Music --imposta-avvio`;
+    const cmd=`pkg install -y python cloudflared && termux-setup-storage; curl -fsSL ${q(SITE_URL()+'musica/capri-musica.py')} -o ~/capri-musica.py && python ~/capri-musica.py --chiave ${q(key)} --supabase ${q(C.url||'')} --pk ${q(C.key||'')} --sito ${q(SITE_URL())} --cartella ~/storage/shared --imposta-avvio`;
     if(await copyText(cmd))toast('Comando copiato: incollalo in Termux sul tablet','ok');else{prompt('Copia questo comando:',cmd);}}catch(e){toast('Errore: '+errMsg(e),'err');}};
   const rg=$('#mu-regen');if(rg)rg.onclick=async()=>{if(!confirm('Il programma già installato smetterà di funzionare finché non riscarichi e riapri il nuovo file. Continuare?'))return;key=await muNewKey();MU.sigs.clear();toast('Nuova chiave: riscarica il programma','ok');};
   const iv=setInterval(()=>{const w=$('#mu-wait');if(!w){clearInterval(iv);return;}if(muOnline())w.textContent='✅ Il PC è collegato: chiudi e goditi la musica.';},3000);
