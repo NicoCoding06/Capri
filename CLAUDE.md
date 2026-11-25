@@ -8,7 +8,7 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
 ## Struttura
 - `src/shell.html`: HTML e CSS. Contiene i segnaposto `/*ENGINE*/` e `/*APP*/`.
 - `src/engine.js`: motore delle formule del foglio di calcolo (Finanze → Fogli).
-- `src/app.js`: tutta la logica (Oggi, Ticket, Wishlist, Finanze con Spese/Abbonamenti/Fogli, Note, notifiche).
+- `src/app.js`: tutta la logica (Oggi, Ticket, Wishlist, Finanze con Spese/Abbonamenti/Fogli, Diary, Note, notifiche, PC sempre sveglio con Wake Lock).
 - `index.html`: GENERATO. Non modificarlo a mano: modifica `src/` e poi esegui `python3 build.py`.
 - `config.js`: URL e chiave publishable di Supabase. Non sovrascriverlo con valori vuoti.
 - `digest.js`: testo delle notifiche, condiviso tra sito (anteprima) e invio.
@@ -19,7 +19,7 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
 
 ## Dati
 Tabella unica `public.docs(user_id, coll, id, data jsonb)`, protetta da RLS.
-Collezioni: tickets, wishlist, sheets, config (doc `main`), spese, abbonamenti, note,
+Collezioni: tickets, wishlist, sheets, config (doc `main`), spese, abbonamenti, note, diary,
 push, pushkeys (chiavi VAPID create dal telefono), pushstate.
 
 ## Come pubblicare una modifica

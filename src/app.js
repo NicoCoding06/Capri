@@ -23,6 +23,7 @@ const plural=(n,a,b)=>n===1?a:b;
 const DEF={
   tcats:[{n:'Lavoro',c:'#4d8dff'},{n:'Casa',c:'#1fe08f'},{n:'Personale',c:'#ff4fd8'},{n:'Burocrazia',c:'#ffd60a'},{n:'Salute',c:'#ff6b6b'}],
   wcats:[{n:'Magic: The Gathering',c:'#ff8a1f'},{n:'Tech',c:'#4d8dff'},{n:'Videogiochi',c:'#a3ff12'},{n:'Casa',c:'#1fe08f'},{n:'Abbigliamento',c:'#ff4fd8'},{n:'Altro',c:'#9a9aa3'}],
+  dcats:[{n:'Tecnico',c:'#4d8dff'},{n:'Strumenti e software',c:'#22d3ee'},{n:'Processi',c:'#ffb547'},{n:'Persone e clienti',c:'#ff4fd8'},{n:'Errori da evitare',c:'#ff2d55'},{n:'Idee',c:'#3dff9a'}],
   scats:[{n:'Spesa',c:'#1fe08f'},{n:'Casa e bollette',c:'#4d8dff'},{n:'Trasporti',c:'#ffd60a'},{n:'Ristoranti e bar',c:'#ff8a1f'},{n:'Svago',c:'#ff4fd8'},{n:'Magic',c:'#ff2d55'},{n:'Abbonamenti',c:'#22d3ee'},{n:'Salute',c:'#ff6b6b'},{n:'Abbigliamento',c:'#a78bfa'},{n:'Altro',c:'#9a9aa3'}]
 };
 const URG=[null,{n:'Bassa',c:'var(--u1)'},{n:'Media',c:'var(--u2)'},{n:'Alta',c:'var(--u3)'},{n:'Critica',c:'var(--u4)'}];
@@ -34,7 +35,7 @@ const S={tickets:[],wish:[],sheets:[],cfg:null,loaded:{t:0,w:0,s:0},view:'ticket
   tf:{status:'attivi',cat:'',urg:0,q:'',sort:'due',late:false,soon:false},
   wf:{status:'voglio',cat:'',q:'',sort:'prio'},
   as:null,g:{c:0,r:0,c2:0,r2:0},ed:null,redraw:null};
-const cfg=()=>({tcats:(S.cfg&&S.cfg.tcats)||DEF.tcats,wcats:(S.cfg&&S.cfg.wcats)||DEF.wcats,scats:(S.cfg&&S.cfg.scats)||DEF.scats,sbudget:(S.cfg&&S.cfg.sbudget)||null,name:(S.cfg&&S.cfg.name)||''});
+const cfg=()=>({tcats:(S.cfg&&S.cfg.tcats)||DEF.tcats,wcats:(S.cfg&&S.cfg.wcats)||DEF.wcats,scats:(S.cfg&&S.cfg.scats)||DEF.scats,dcats:(S.cfg&&S.cfg.dcats)||DEF.dcats,sbudget:(S.cfg&&S.cfg.sbudget)||null,name:(S.cfg&&S.cfg.name)||''});
 const catOf=(list,n)=>cfg()[list].find(c=>c.n===n);
 
 /* ---------- ui helpers ---------- */
@@ -50,7 +51,7 @@ const errMsg=e=>(e&&(e.message||e.error_description||e.code))||'errore';
 
 /* ---------- storage (Supabase) ---------- */
 let SB=null,UID=null,EMAIL='';
-const CACHE={tickets:new Map(),wishlist:new Map(),sheets:new Map(),config:new Map(),spese:new Map(),abbonamenti:new Map(),note:new Map(),watch:new Map(),push:new Map(),pushkeys:new Map(),pushstate:new Map()};
+const CACHE={tickets:new Map(),wishlist:new Map(),sheets:new Map(),config:new Map(),spese:new Map(),abbonamenti:new Map(),note:new Map(),diary:new Map(),push:new Map(),pushkeys:new Map(),pushstate:new Map()};
 const SUBS={};
 const wq={},pend={};let pendN=0;
 function emit(coll){const fn=SUBS[coll];if(fn)fn([...(CACHE[coll]||new Map()).entries()].map(([id,data])=>({id,data})));}
@@ -142,7 +143,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if
 
 /* ---------- categories manager ---------- */
 function catManager(key){
-  const title=key==='tcats'?'Macrocategorie dei ticket':key==='wcats'?'Categorie della wishlist':'Categorie e budget delle spese';const sc=key==='scats';
+  const title=key==='tcats'?'Macrocategorie dei ticket':key==='wcats'?'Categorie della wishlist':key==='dcats'?'Macrocategorie del Diary':'Categorie e budget delle spese';const sc=key==='scats';
   const orig=cfg()[key].map(c=>c.n);let list=clone(cfg()[key]);
   const draw=()=>{$('#cm-list').innerHTML=list.map((c,i)=>`<div class="catrow"><input type="color" value="${esc(c.c)}" data-i="${i}" data-k="c" aria-label="Colore"><input value="${esc(c.n)}" data-i="${i}" data-k="n" maxlength="40" aria-label="Nome">${sc?`<input value="${c.b!=null&&c.b!==''?esc(String(c.b).replace('.',',')):''}" data-i="${i}" data-k="b" inputmode="decimal" placeholder="Budget €/mese" aria-label="Budget mensile" style="max-width:150px">`:''}<button class="btn sm danger" data-del="${i}" aria-label="Elimina" type="button">×</button></div>`).join('');};
   openModal(`<div class="mh"><h2>${title}</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
@@ -160,7 +161,7 @@ function catManager(key){
     const ren={};orig.forEach((o,i)=>{if(o&&list[i]&&list[i].n!==o)ren[o]=list[i].n;});
     const next={...cfg(),[key]:list};if(sc){const t=numIn($('#cm-tot').value);next.sbudget=t?Math.abs(t):null;}closeModal();
     await put('config/main',next);
-    const targets=key==='tcats'?[['tickets',S.tickets]]:key==='wcats'?[['wishlist',S.wish]]:[['spese',S.spese],['abbonamenti',S.abb]];
+    const targets=key==='tcats'?[['tickets',S.tickets]]:key==='wcats'?[['wishlist',S.wish]]:key==='dcats'?[['diary',S.diary]]:[['spese',S.spese],['abbonamenti',S.abb]];
     for(const[coll,arr]of targets)for(const it of arr){if(ren[it.cat]){const b=body(it);b.cat=ren[it.cat];await put(coll+'/'+it.id,b);}}
     toast('Categorie salvate','ok');
   };
@@ -268,7 +269,7 @@ function persistTicketPart(id,part){
 }
 function ticketModal(t){
   const isNew=!t;
-  const d=t?clone(t):{id:uid(),title:'',cat:S.tf.cat||(cfg().tcats[0]?cfg().tcats[0].n:''),urg:2,status:'aperto',due:'',desc:'',att:[],notes:[],created:Date.now()};
+  const d=t?clone(t):{id:uid(),title:'',cat:null,urg:2,status:'aperto',due:'',desc:'',att:[],notes:[],created:Date.now()};
   d.att=d.att||[];d.notes=d.notes||[];
   const ed={busy:0};
   const cats=cfg().tcats.slice();if(d.cat&&!cats.some(c=>c.n===d.cat))cats.push({n:d.cat,c:'#9a9aa3'});
@@ -276,7 +277,7 @@ function ticketModal(t){
   <form class="form" id="tf" autocomplete="off">
     <label class="f full"><span>Titolo</span><input name="title" maxlength="200" value="${esc(d.title)}" autofocus required></label>
     <div class="f full"><span>Urgenza</span><div class="pick">${[1,2,3,4].map(u=>`<label style="--u:${URG[u].c}"><input type="radio" name="urg" value="${u}" ${(d.urg||2)===u?'checked':''}><b>${um(u)}${URG[u].n}</b></label>`).join('')}</div></div>
-    <label class="f"><span>Macrocategoria</span><select name="cat"><option value="">Nessuna</option>${cats.map(c=>`<option ${c.n===d.cat?'selected':''}>${esc(c.n)}</option>`).join('')}</select></label>
+    <div class="f full"><span>Macrocategoria${isNew?' <em class="req">scegline una</em>':''}</span><div class="chips" id="t-cat-pick">${cats.map(c=>`<label style="--c:${esc(c.c)}"><input type="radio" name="cat" value="${esc(c.n)}" ${c.n===d.cat?'checked':''}><b>${esc(c.n)}</b></label>`).join('')}<label style="--c:#6f6f7a"><input type="radio" name="cat" value="" ${!isNew&&!d.cat?'checked':''}><b>Nessuna</b></label></div></div>
     <label class="f"><span>Stato</span><select name="status">${Object.entries(STAT).map(([k,v])=>`<option value="${k}" ${d.status===k?'selected':''}>${v}</option>`).join('')}</select></label>
     <label class="f"><span>Scadenza</span><input type="date" name="due" value="${esc(d.due||'')}"></label>
     <div class="f full"><span>Scadenza rapida</span><div class="snz" id="t-snz"><button type="button" data-sz="0">Oggi</button><button type="button" data-sz="1">Domani</button><button type="button" data-sz="3">+3 giorni</button><button type="button" data-sz="7">+1 settimana</button><button type="button" data-sz="30">+1 mese</button><button type="button" data-sz="x">Nessuna</button></div></div>
@@ -291,7 +292,7 @@ function ticketModal(t){
   const drawNotes=()=>{const el=$('#t-notes');if(!el)return;el.innerHTML=d.notes.length?d.notes.map((n,i)=>({n,i})).reverse().map(({n,i})=>`<li><time>${fmtTime(n.t)}</time>${esc(n.x)}<button class="btn sm ghost" data-nrm="${i}" aria-label="Elimina aggiornamento" type="button">×</button></li>`).join(''):'<li class="mut small">Ancora nessun aggiornamento.</li>';};
   drawAtt();drawNotes();S.redraw=drawAtt;
   $('#t-snz').addEventListener('click',e=>{const b=e.target.closest('[data-sz]');if(!b)return;const inp=$('#tf [name=due]');if(b.dataset.sz==='x'){inp.value='';return;}const base=new Date();base.setDate(base.getDate()+(+b.dataset.sz));inp.value=isoDay(base);});
-  const read=()=>{const fd=new FormData($('#tf'));d.title=String(fd.get('title')||'').trim();d.urg=+fd.get('urg')||2;d.cat=String(fd.get('cat')||'');d.status=String(fd.get('status')||'aperto');d.due=String(fd.get('due')||'');d.desc=String(fd.get('desc')||'');};
+  const read=()=>{const fd=new FormData($('#tf'));d.title=String(fd.get('title')||'').trim();d.urg=+fd.get('urg')||2;d.cat=fd.get('cat')===null?null:String(fd.get('cat'));d.status=String(fd.get('status')||'aperto');d.due=String(fd.get('due')||'');d.desc=String(fd.get('desc')||'');};
   async function addFiles(files){
     files=[...files];if(!files.length)return;
     ed.busy+=files.length;drawAtt();
@@ -314,6 +315,7 @@ function ticketModal(t){
   $('#t-notes').addEventListener('click',async e=>{const b=e.target.closest('[data-nrm]');if(!b)return;if(!armed(b,'Elimina'))return;d.notes.splice(+b.dataset.nrm,1);drawNotes();if(!isNew)await persistTicketPart(d.id,{notes:d.notes});});
   $('#t-save').onclick=async()=>{
     read();if(!d.title){toast('Il ticket ha bisogno di un titolo','err');$('#tf [name=title]').focus();return;}
+    if(d.cat===null){toast('Scegli la macrocategoria (o “Nessuna”)','err');const p=$('#t-cat-pick');p.classList.add('need');p.scrollIntoView({block:'center',behavior:'smooth'});setTimeout(()=>p.classList.remove('need'),1600);return;}
     if(ed.busy){toast('Attendi la fine del caricamento degli allegati','err');return;}
     const b=body(d);
     if(isNew)b.num=Math.max(0,...S.tickets.map(x=>+x.num||0))+1;
@@ -1191,7 +1193,9 @@ function renderOggi(){
   const cWish=card('var(--wl)','star',deals.length?'Occasioni in wishlist':'Wishlist',['#wishlist','Apri'],show.length?`<div class="rows">${show.map(w=>{const dl=wDelta(w);return`<button class="rowi" data-oa="${A(()=>{location.hash='#wishlist';})}" style="--c:${esc((catOf('wcats',w.cat)||{}).c||'#9a9aa3')}"><span class="dot"></span><span class="t">${esc(w.name)}</span>${dl!==null&&dl!==0?`<span class="s" style="color:${dl<0?'var(--u1)':'var(--u4)'}">${dl<0?'▼':'▲'} ${Math.abs(dl*100).toFixed(0)}%</span>`:''}<span class="a">${eur(priceOf(w))}</span></button>`;}).join('')}</div>`:`<p class="mini">La wishlist è vuota.</p>`);
   const pins=S.notes.filter(n=>n.pin).sort((a,b)=>(b.upd||0)-(a.upd||0)).slice(0,3);
   const cNotes=card('var(--nt)','note','Note fissate',['#note','Tutte'],pins.length?`<div class="onotes">${pins.map(n=>nCard(n,true)).join('')}</div>`:`<p class="mini">Fissa una nota per vederla qui.</p><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>noteModal(null))}">${ico('plus')}Nuova nota</button>`);
-  $('#o-dash').innerHTML=cTodo+cMoney+cNext+cWish+cNotes;
+  const dl=S.diary.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||(b.created||0)-(a.created||0)).slice(0,3),stk=dStreak();
+  const cDiary=card('var(--dy)','book','Diary',['#diary','Apri'],(dl.length?`<div class="rows">${dl.map(x=>`<button class="rowi" data-oa="${A(()=>diaryModal(x))}" style="--c:${esc(dcatCol(x.cat))}"><span class="dot"></span><span class="t">${esc(x.title||'Senza titolo')}</span><span class="s">${esc(relDays(daysTo(x.date)).replace('scaduto da','').replace('scaduto ieri','ieri').replace(/^ /,'')).replace(/^(\d+) giorni$/,'$1 giorni fa')}</span></button>`).join('')}</div>`:`<p class="mini">Cosa hai imparato oggi al lavoro?</p>`)+`${stk>1?`<p class="mini" style="margin-top:10px">🔥 ${stk} giorni di fila</p>`:''}<button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>diaryModal(null))}">${ico('plus')}Nuovo appunto</button>`);
+  $('#o-dash').innerHTML=cTodo+cMoney+cNext+cDiary+cWish+cNotes;
 }
 $('#v-oggi').addEventListener('click',e=>{
   if(e.target.closest('.onotes')){onNoteClick(e);return;}
@@ -1208,8 +1212,9 @@ $('#add-btn').onclick=()=>{
     <button style="--c:var(--nt)" data-q="lista">${ico('note')}Lista<span>Spesa, cose da comprare…</span></button>
     <button style="--c:var(--og)" data-q="abb">${ico('repeat')}Abbonamento<span>O una scadenza da ricordare</span></button>
     <button style="--c:var(--wl)" data-q="wish">${ico('star')}Desiderio<span>Da aggiungere alla wishlist</span></button>
+    <button style="--c:var(--dy)" data-q="diary">${ico('book')}Diary<span>Una cosa imparata al lavoro</span></button>
   </div>`);
-  DLG.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const k=b.dataset.q;closeModal();if(k==='wish')wishModal(null);else quickAdd(k);});
+  DLG.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const k=b.dataset.q;closeModal();if(k==='wish')wishModal(null);else if(k==='diary')diaryModal(null);else quickAdd(k);});
 };
 
 /* ================= NOTIFICHE ================= */
@@ -1316,6 +1321,121 @@ function notifModal(){
   const off=$('#nt-off');if(off)off.onclick=async()=>{if(!armed(off))return;await disableNotif();closeModal();toast('Notifiche disattivate su questo dispositivo','ok');renderOggi();};
 }
 
+/* ================= DIARY ================= */
+S.diary=[];S.df={cat:'',q:'',tag:''};
+const dcatCol=n=>(cfg().dcats.find(c=>c.n===n)||{}).c||'#9a9aa3';
+function inl(s){return s.replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');}
+function md(t){
+  return String(t||'').split('```').map((b,i)=>{
+    if(i%2)return`<pre><code>${esc(b.replace(/^[\w-]*\n/,'').replace(/\n$/,''))}</code></pre>`;
+    let out='',list=false;
+    for(const l of esc(b).split('\n')){
+      const m=l.match(/^\s*[-*•]\s+(.*)$/);
+      if(m){if(!list){out+='<ul>';list=true;}out+='<li>'+inl(m[1])+'</li>';continue;}
+      if(list){out+='</ul>';list=false;}
+      const h=l.match(/^#{1,3}\s+(.*)$/);
+      if(h){out+='<h4>'+inl(h[1])+'</h4>';continue;}
+      if(l.trim())out+='<p>'+inl(l)+'</p>';
+    }
+    if(list)out+='</ul>';return out;
+  }).join('');
+}
+const dTags=x=>(x.tags||[]).filter(Boolean);
+function dStreak(){
+  const days=new Set(S.diary.map(x=>x.date).filter(Boolean));let n=0;const d=new Date();
+  if(!days.has(isoDay(d)))d.setDate(d.getDate()-1);
+  while(days.has(isoDay(d))){n++;d.setDate(d.getDate()-1);}
+  return n;
+}
+function dFiltered(){
+  const f=S.df;let a=S.diary.slice();
+  if(f.cat)a=a.filter(x=>x.cat===f.cat);
+  if(f.tag)a=a.filter(x=>dTags(x).includes(f.tag));
+  if(f.q){const q=f.q.toLowerCase();a=a.filter(x=>[x.title,x.body,x.cat,...dTags(x)].join(' ').toLowerCase().includes(q));}
+  return a.sort((x,y)=>(!!y.pin-!!x.pin)||String(y.date||'').localeCompare(String(x.date||''))||(y.created||0)-(x.created||0));
+}
+function dyCard(x){
+  const c=dcatCol(x.cat),tags=dTags(x);
+  return`<article class="dy" style="--c:${esc(c)}" data-did="${esc(x.id)}" tabindex="0">
+    <div class="dy-h">${x.cat?`<span class="chip" style="--c:${esc(c)}">${esc(x.cat)}</span>`:''}<time>${fmtDate(x.date)}</time>${x.pin?'<span class="pin" title="Fissato">●</span>':''}</div>
+    <h3>${esc(x.title||'Senza titolo')}</h3>
+    ${x.body?`<div class="dy-body md">${md(x.body)}</div>`:''}
+    ${tags.length?`<div class="dy-tags">${tags.map(t=>`<button class="tag" type="button" data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>`:''}
+  </article>`;
+}
+function renderDiary(){
+  const all=S.diary,now=new Date(),wk=new Date(now);wk.setDate(now.getDate()-6);const wks=isoDay(wk);
+  const week=all.filter(x=>String(x.date||'')>=wks).length,streak=dStreak();
+  const used=new Set(all.map(x=>x.cat).filter(Boolean)).size;
+  $('#dy-stats').innerHTML=[[all.length,'Appunti in totale','var(--dy)'],[week,'Negli ultimi 7 giorni','#fff'],[streak,streak===1?'Giorno di fila':'Giorni di fila','var(--cpg)'],[used,'Categorie usate','var(--mut)']].map(([n,l,c])=>`<div class="stat static" style="--c:${c}"><b>${n}</b><span>${l}</span></div>`).join('');
+  const last=all.slice().sort((a,b)=>(b.created||0)-(a.created||0))[0];
+  $('#dy-sum').innerHTML=all.length?`${week?`Negli ultimi 7 giorni hai annotato <b>${week} ${plural(week,'cosa','cose')}</b>.`:'Questa settimana non hai ancora annotato niente.'}${last?` L'ultima: <b>${esc(last.title||'senza titolo')}</b>${last.cat?` in ${esc(last.cat)}`:''}.`:''}`:'Annota quello che impari al lavoro: comandi, procedure, consigli, errori da non ripetere. Tutto diviso per macrocategorie e sempre ricercabile.';
+  const counts=new Map();all.forEach(x=>counts.set(x.cat||'',(counts.get(x.cat||'')||0)+1));
+  const cats=cfg().dcats.slice();for(const k of counts.keys())if(k&&!cats.some(c=>c.n===k))cats.push({n:k,c:'#9a9aa3'});
+  $('#dy-cats').innerHTML=`<button class="dc${!S.df.cat?' on':''}" data-dc="" style="--c:var(--dy)"><i></i><span>Tutte</span><b>${all.length}</b></button>`+cats.map(c=>`<button class="dc${S.df.cat===c.n?' on':''}" data-dc="${esc(c.n)}" style="--c:${esc(c.c)}"><i></i><span>${esc(c.n)}</span><b>${counts.get(c.n)||0}</b></button>`).join('')+`<button class="dc dc-m" id="dy-cm" type="button">${ico('tag')}<span>Gestisci categorie</span></button>`;
+  $('#dy-tagf').innerHTML=S.df.tag?`<button class="tag on" type="button" data-untag>#${esc(S.df.tag)} ×</button>`:'';
+  if(!S.ready)return;
+  const list=dFiltered();const g=$('#dy-list');
+  if(!list.length){g.innerHTML=all.length?`<div class="empty">${ico('search')}<b>Nessun appunto trovato</b>Cambia categoria o ricerca.</div>`:`<div class="empty">${ico('book')}<b>Il diario è vuoto</b>Premi “Nuovo appunto” e scrivi la prima cosa che hai imparato oggi.</div>`;return;}
+  let html='',cur='';
+  const pins=list.filter(x=>x.pin),rest=list.filter(x=>!x.pin);
+  if(pins.length)html+=`<h2 class="dy-m">Fissati</h2>`+pins.map(dyCard).join('');
+  for(const x of rest){const m=String(x.date||'').slice(0,7);if(m&&m!==cur){cur=m;html+=`<h2 class="dy-m">${esc(monthLabel(m))}</h2>`;}html+=dyCard(x);}
+  g.innerHTML=html;
+}
+$('#dy-cats').addEventListener('click',e=>{if(e.target.closest('#dy-cm')){catManager('dcats');return;}const b=e.target.closest('[data-dc]');if(!b)return;S.df.cat=b.dataset.dc;renderDiary();});
+$('#dy-q').addEventListener('input',e=>{S.df.q=e.target.value.trim();renderDiary();});
+$('#dy-tagf').addEventListener('click',e=>{if(e.target.closest('[data-untag]')){S.df.tag='';renderDiary();}});
+$('#dy-list').addEventListener('click',e=>{
+  const t=e.target.closest('[data-tag]');if(t){e.stopPropagation();S.df.tag=t.dataset.tag;renderDiary();scrollTo(0,0);return;}
+  if(e.target.closest('a'))return;
+  const c=e.target.closest('[data-did]');if(!c)return;const x=S.diary.find(y=>y.id===c.dataset.did);if(x)diaryModal(x);
+});
+$('#dy-list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset.did){const x=S.diary.find(y=>y.id===e.target.dataset.did);if(x)diaryModal(x);}});
+$('#dy-new').onclick=()=>diaryModal(null);
+function diaryModal(x){
+  const isNew=!x;
+  const d=x?clone(x):{id:uid(),title:'',body:'',cat:'',tags:[],date:isoDay(),pin:false,created:Date.now()};
+  d.tags=d.tags||[];const orig=JSON.stringify(body(d));let deleted=false;
+  const cats=cfg().dcats.slice();if(d.cat&&!cats.some(c=>c.n===d.cat))cats.push({n:d.cat,c:'#9a9aa3'});
+  const allTags=[...new Set(S.diary.flatMap(dTags))].sort();
+  openModal(`<div class="mh"><h2>${isNew?'Nuovo appunto':'Appunto'}</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <div style="display:grid;gap:14px">
+    <input id="dm-title" placeholder="Cosa hai imparato? Es. Come si fa il rebase su Git" value="${esc(d.title)}" maxlength="160" style="font-size:20px;font-weight:700" ${isNew?'autofocus':''} aria-label="Titolo">
+    <div class="f"><span>Macrocategoria</span><div class="chips" id="dm-cat">${cats.map(c=>`<label style="--c:${esc(c.c)}"><input type="radio" name="dcat" value="${esc(c.n)}" ${c.n===d.cat?'checked':''}><b>${esc(c.n)}</b></label>`).join('')}</div></div>
+    <div class="form"><label class="f"><span>Data</span><input type="date" id="dm-date" value="${esc(d.date||isoDay())}"></label>
+      <label class="f two"><span>Tag (separati da virgola)</span><input id="dm-tags" list="dm-tl" value="${esc(d.tags.join(', '))}" placeholder="es. git, excel, cliente-rossi"><datalist id="dm-tl">${allTags.map(t=>`<option value="${esc(t)}">`).join('')}</datalist></label></div>
+    <div class="seg" id="dm-mode" style="justify-self:start"><button data-v="w" type="button" class="on">Scrivi</button><button data-v="p" type="button">Anteprima</button></div>
+    <textarea id="dm-body" rows="12" placeholder="Scrivi qui i dettagli. Puoi usare **grassetto**, \`codice\`, elenchi con - e blocchi di codice tra \`\`\`">${esc(d.body)}</textarea>
+    <div id="dm-prev" class="md dy-prev" hidden></div>
+    <label class="f row"><input type="checkbox" id="dm-pin" ${d.pin?'checked':''}><span>Fissa in alto</span></label>
+  </div>
+  <div class="mf">${isNew?'':'<button class="btn danger" id="dm-del" type="button">Elimina</button>'}<span class="sp"></span><button class="btn pri" data-close type="button">Fatto</button></div>`,{wide:true,close:()=>{if(!deleted)save();}});
+  const read=()=>{d.title=$('#dm-title').value.trim();d.body=$('#dm-body').value;d.cat=(DLG.querySelector('[name=dcat]:checked')||{}).value||'';d.date=$('#dm-date').value||isoDay();
+    d.tags=[...new Set($('#dm-tags').value.split(',').map(t=>t.trim().replace(/^#/,'').toLowerCase()).filter(Boolean))];d.pin=$('#dm-pin').checked;};
+  $('#dm-mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#dm-mode button').forEach(x=>x.classList.toggle('on',x===b));const p=b.dataset.v==='p';
+    if(p){$('#dm-prev').innerHTML=md($('#dm-body').value)||'<p class="mini">Niente da mostrare.</p>';}$('#dm-body').hidden=p;$('#dm-prev').hidden=!p;});
+  function save(){read();const b=body(d);if(isNew&&!b.title&&!b.body.trim())return;if(JSON.stringify(b)===orig)return;b.upd=Date.now();put('diary/'+d.id,b).then(ok=>{if(ok&&isNew)toast('Appunto salvato','ok');});}
+  const del=$('#dm-del');if(del)del.onclick=async()=>{if(!armed(del))return;deleted=true;closeModal();if(await drop('diary/'+d.id))toast('Appunto eliminato','ok');};
+}
+
+/* ================= PC SVEGLIO (Screen Wake Lock) ================= */
+let WL=null;
+const touchOnly=()=>matchMedia('(pointer:coarse)').matches&&!matchMedia('(pointer:fine)').matches;
+const wakeWanted=()=>{try{const v=localStorage.getItem('capri-wake');return v===null?!touchOnly():v==='1';}catch(e){return!touchOnly();}};
+const wakeActive=()=>!!(WL&&!WL.released);
+function paintWake(){const on=wakeActive();document.body.classList.toggle('awake',on);const b=$('.brand');if(b)b.title=on?'Capri sta tenendo sveglio il computer':(wakeWanted()&&!('wakeLock' in navigator)?'Questo browser non permette di tenere sveglio il computer':'');}
+async function wakeOn(){
+  if(!wakeWanted()||!('wakeLock' in navigator)||document.visibilityState!=='visible'||wakeActive()){paintWake();return;}
+  try{WL=await navigator.wakeLock.request('screen');WL.addEventListener('release',paintWake);}catch(e){WL=null;}
+  paintWake();
+}
+async function wakeOff(){try{if(WL)await WL.release();}catch(e){}WL=null;paintWake();}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wakeOn();});
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(wakeWanted()&&!wakeActive())wakeOn();},{passive:true}));
+setInterval(()=>{if(wakeWanted()&&document.visibilityState==='visible'&&!wakeActive())wakeOn();},30000);
+wakeOn();
+
 /* ================= MENU: backup, install, logout ================= */
 function backupData(){
   const out={app:'capri',version:1,exported:new Date().toISOString()};
@@ -1329,6 +1449,7 @@ $('#menu-btn').onclick=()=>{
   <div class="menu">
     <div style="display:flex;gap:8px"><input id="m-name" placeholder="Come ti chiamo?" value="${esc(cfg().name)}" maxlength="30" aria-label="Il tuo nome"><button class="btn" id="m-name-ok" type="button">Salva nome</button></div>
     <button class="btn" id="m-notif" type="button">${ico('bell')}Notifiche giornaliere</button>
+    <button class="btn" id="m-wake" type="button">${ico('logo')}<span>${'wakeLock' in navigator?(wakeWanted()?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)'):'Computer sempre sveglio: non supportato da questo browser'}</span></button>
     <button class="btn" id="m-exp" type="button">Scarica backup completo (file .json)</button>
     <label class="btn" style="cursor:pointer"><input type="file" accept=".json,application/json" hidden id="m-imp">Ripristina da un backup</label>
     <div class="note-box"><b>Installa come app</b><br>${ios?'In Safari tocca Condividi, poi “Aggiungi alla schermata Home”.':'Nel menu del browser (⋮) scegli “Installa app” o “Aggiungi a schermata Home”.'} Capri si aprirà a schermo intero con la sua icona.</div>
@@ -1337,20 +1458,23 @@ $('#menu-btn').onclick=()=>{
   </div>`);
   $('#m-name-ok').onclick=async()=>{const n=$('#m-name').value.trim();await put('config/main',{...cfg(),name:n});toast('Nome salvato','ok');renderOggi();};
   $('#m-notif').onclick=()=>{closeModal();notifModal();};
+  $('#m-wake').onclick=async()=>{if(!('wakeLock' in navigator)){toast('Questo browser non lo supporta: usa Chrome, Edge o Safari aggiornati','err');return;}
+    const on=!wakeWanted();try{localStorage.setItem('capri-wake',on?'1':'0');}catch(e){}if(on)await wakeOn();else await wakeOff();
+    $('#m-wake span').textContent=on?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)';toast(on?(wakeActive()?'Il computer resterà sveglio finché Capri è aperto':'Attivo: parte appena Capri è in primo piano'):'Il computer può tornare in standby','ok');};
   $('#m-exp').onclick=()=>{saveBlob(`capri-backup-${isoDay()}.json`,new Blob([JSON.stringify(backupData(),null,1)],{type:'application/json'}));toast('Backup scaricato','ok');};
   $('#m-imp').onchange=async e=>{
     const f=e.target.files[0];e.target.value='';if(!f)return;
     let j;try{j=JSON.parse(await f.text());}catch(err){toast('File di backup non valido','err');return;}
     if(!j||j.app!=='capri'){toast('Questo non è un backup di Capri','err');return;}
     closeModal();let n=0;
-    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
+    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note','diary'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
     toast(`Ripristinati ${n} elementi`,'ok');
   };
   $('#m-out').onclick=async()=>{await SB.auth.signOut();await authStorage.removeItem('capri-login-at');location.reload();};
 };
 
 /* ================= ROUTER + BOOT ================= */
-const VIEWS=['oggi','ticket','wishlist','finanze','note'];
+const VIEWS=['oggi','ticket','wishlist','finanze','diary','note'];
 const HALIAS={spese:['finanze','spese'],abbonamenti:['finanze','abb'],fogli:['finanze','fogli']};
 function route(){
   const hh=location.hash.slice(1);let v=hh;if(HALIAS[hh]){v=HALIAS[hh][0];S.fsub=HALIAS[hh][1];}
@@ -1359,7 +1483,7 @@ function route(){
   S.view=v;document.body.dataset.v=v;
   VIEWS.forEach(x=>{$('#v-'+x).hidden=x!==v;});
   $$('[data-nav]').forEach(a=>{a.classList.toggle('on',a.dataset.nav===v);if(a.dataset.nav===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();
+  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();else if(v==='diary')renderDiary();
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
   scrollTo(0,0);
 }
@@ -1374,6 +1498,7 @@ SUBS.config=docs=>{const m=docs.find(d=>d.id==='main');S.cfg=m?clone(m.data):nul
 SUBS.spese=docs=>{S.spese=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi();finRefresh();};
 SUBS.abbonamenti=docs=>{S.abb=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi();finRefresh();};
 SUBS.push=()=>{renderOggi();};
+SUBS.diary=docs=>{S.diary=docs.map(d=>({...clone(d.data),id:d.id}));renderDiary();renderOggi();};
 SUBS.note=docs=>{S.notes=docs.map(d=>({...clone(d.data),id:d.id}));renderNotes();renderOggi();};
 
 const gate=$('#gate');
@@ -1398,9 +1523,9 @@ $('#g-login').addEventListener('submit',async e=>{
 async function start(session){
   UID=session.user.id;EMAIL=session.user.email||'';gate.hidden=true;setSync('Caricamento…','warn');
   try{await loadAll();syncState();}
-  catch(e){setSync('Archivio non raggiungibile','err');showErr(e);S.loaded={t:1,w:1,s:1};S.ready=true;renderTickets();renderWish();renderOggi();renderNotes();if(S.view==='finanze')renderFin();return;}
+  catch(e){setSync('Archivio non raggiungibile','err');showErr(e);S.loaded={t:1,w:1,s:1};S.ready=true;renderTickets();renderWish();renderOggi();renderNotes();renderDiary();if(S.view==='finanze')renderFin();return;}
   $('#errbar').hidden=true;
-  S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();if(S.view==='finanze')renderFin();
+  S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();renderDiary();if(S.view==='finanze')renderFin();
   try{SB.channel('docs-'+UID).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'user_id=eq.'+UID},onRealtime).subscribe();}catch(e){}
   let lastLoad=Date.now();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastLoad>20000&&!pendN&&!dirty.size&&!S.ed){lastLoad=Date.now();loadAll().catch(()=>{});}});

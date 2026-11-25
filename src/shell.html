@@ -19,8 +19,8 @@
    PICTURE: each section opens on a lit hero panel holding its live numbers, then the working board itself
    COLOUR and TYPE: near-black ground, white Helvetica; blue tickets, magenta wishes, green money; urgency green, yellow, orange, red
    LAYOUT: sticky top bar; hero panel; filters; board. Bottom tab bar on phones, safe areas respected */
-:root{color-scheme:dark;--bg:#08080a;--p1:#111114;--p2:#18181c;--p3:#222228;--line:#2a2a31;--line2:#383841;--ink:#fff;--mut:#a3a3ae;--dim:#6f6f7a;--tk:#4d8dff;--wl:#ff4fd8;--fn:#1fe08f;--og:#ffb547;--nt:#22d3ee;--wt:#a78bfa;--cpp:#ff2e93;--cpg:#3dff9a;--cpb:#43b3ff;--u1:#2ee27a;--u2:#ffd60a;--u3:#ff8a1f;--u4:#ff2d55;--acc:var(--tk);--r:16px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
-body[data-v=wishlist]{--acc:var(--wl)}body[data-v=finanze]{--acc:var(--fn)}body[data-v=oggi]{--acc:var(--og)}body[data-v=note]{--acc:var(--nt)}body[data-v=watchlist]{--acc:var(--wt)}
+:root{color-scheme:dark;--bg:#08080a;--p1:#111114;--p2:#18181c;--p3:#222228;--line:#2a2a31;--line2:#383841;--ink:#fff;--mut:#a3a3ae;--dim:#6f6f7a;--tk:#4d8dff;--wl:#ff4fd8;--fn:#1fe08f;--og:#ffb547;--nt:#22d3ee;--wt:#a78bfa;--dy:#b794ff;--cpp:#ff2e93;--cpg:#3dff9a;--cpb:#43b3ff;--u1:#2ee27a;--u2:#ffd60a;--u3:#ff8a1f;--u4:#ff2d55;--acc:var(--tk);--r:16px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+body[data-v=wishlist]{--acc:var(--wl)}body[data-v=finanze]{--acc:var(--fn)}body[data-v=oggi]{--acc:var(--og)}body[data-v=note]{--acc:var(--nt)}body[data-v=diary]{--acc:var(--dy)}
 *{box-sizing:border-box;min-width:0}
 html{background:var(--bg)}
 body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.5 Helvetica,"Helvetica Neue",Arial,sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
@@ -39,7 +39,7 @@ svg{flex:none}
 .nav a svg{width:19px;height:19px}
 .nav a:hover{color:#fff}
 .nav a.on{background:var(--p3);color:#fff;box-shadow:inset 0 0 0 1px var(--line2)}
-.nav a[data-nav=oggi].on svg{color:var(--og)}.nav a[data-nav=note].on svg{color:var(--nt)}.nav a[data-nav=watchlist].on svg{color:var(--wt)}.nav a[data-nav=ticket].on svg{color:var(--tk)}.nav a[data-nav=wishlist].on svg{color:var(--wl)}.nav a[data-nav=finanze].on svg{color:var(--fn)}
+.nav a[data-nav=oggi].on svg{color:var(--og)}.nav a[data-nav=note].on svg{color:var(--nt)}.nav a[data-nav=diary].on svg{color:var(--dy)}.nav a[data-nav=ticket].on svg{color:var(--tk)}.nav a[data-nav=wishlist].on svg{color:var(--wl)}.nav a[data-nav=finanze].on svg{color:var(--fn)}
 .tright{margin-left:auto;display:flex;align-items:center;gap:12px}
 .sync{cursor:pointer;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:7px;white-space:nowrap}
 .sync::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
@@ -403,6 +403,43 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
 .ckb::before{content:"";position:absolute;inset:0;margin:auto;width:18px;height:18px;border-radius:50%;border:2px solid var(--c);box-shadow:0 0 8px -2px var(--c)}
 .ckb:hover::before{background:var(--c)}
 .ckb:hover::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;color:#000;font-weight:700;font-size:12px}
+/* diary */
+.dy-wrap{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
+.dy-side{position:sticky;top:84px}
+.dy-cats{display:grid;gap:6px}
+.dc{--c:var(--dy);display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:rgba(17,17,20,.7);color:#e6e6ec;font:inherit;font-size:14px;font-weight:700;cursor:pointer;text-align:left}
+.dc i{width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);flex:none}
+.dc span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc b{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+.dc:hover{border-color:var(--line2)}
+.dc.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--p1));color:#fff}
+.dc.dc-m{color:var(--mut);border-style:dashed}.dc.dc-m svg{width:16px;height:16px}
+.dy-list{columns:340px;column-gap:14px}
+.dy-list .empty,.dy-list .skel{column-span:all;display:block}
+.dy-m{column-span:all;margin:6px 4px 12px;font-size:14px;color:var(--mut);font-weight:700;letter-spacing:.02em}
+.dy-m:not(:first-child){margin-top:18px}
+.dy{--c:var(--dy);break-inside:avoid;margin:0 0 14px;padding:16px;border-radius:18px;background:linear-gradient(180deg,color-mix(in srgb,var(--c) 10%,var(--p1)),var(--p1) 110px);border:1px solid color-mix(in srgb,var(--c) 30%,var(--line));cursor:pointer;transition:border-color .15s,transform .2s}
+.dy:hover{border-color:var(--c);transform:translateY(-2px)}
+.dy-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}.dy-h time{font-size:12px;color:var(--mut)}.dy-h .pin{margin-left:auto;color:var(--c)}
+.dy h3{margin:0 0 6px;font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+.dy-body{max-height:240px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 75%,transparent);mask-image:linear-gradient(180deg,#000 75%,transparent)}
+.md{font-size:14px;color:#dcdce3;overflow-wrap:anywhere}
+.md p{margin:0 0 6px}.md ul{margin:0 0 6px;padding-left:18px}.md li{margin:2px 0}
+.md h4{margin:8px 0 4px;font-size:14px;color:#fff}
+.md code{font-family:Menlo,Consolas,monospace;font-size:12.5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:1px 5px}
+.md pre{margin:6px 0;padding:10px 12px;border-radius:10px;background:#050506;border:1px solid var(--line);overflow-x:auto}
+.md pre code{background:none;border:0;padding:0;font-size:12.5px;color:var(--cpg)}
+.md a{color:var(--dy)}
+.dy-prev{min-height:200px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--p1)}
+.dy-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{font:inherit;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--dy) 40%,var(--line));background:transparent;color:var(--dy);cursor:pointer}
+.tag.on{background:var(--dy);color:#000}
+@media(max-width:900px){.dy-wrap{grid-template-columns:minmax(0,1fr)}.dy-side{position:static}.dy-cats{display:flex;overflow-x:auto;gap:6px;padding-bottom:4px}.dc{width:auto;flex:none}.dc span{overflow:visible}}
+.req{font-style:normal;font-weight:400;color:var(--u2);margin-left:6px}
+.chips.need b{animation:need .5s ease-in-out 3}
+@keyframes need{50%{border-color:var(--u4);box-shadow:0 0 14px -2px var(--u4)}}
+body.awake .brand svg{animation:breatheG 4.5s ease-in-out infinite,spinlogo 14s linear infinite!important}
+@keyframes spinlogo{to{transform:rotate(360deg)}}
 /* gate */
 .gate{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:24px;background:radial-gradient(900px 500px at 50% -10%,color-mix(in srgb,var(--tk) 22%,transparent),transparent 65%),var(--bg);overflow:auto}
 .gcard{width:min(420px,100%);background:rgba(17,17,20,.9);border:1px solid var(--line2);border-radius:26px;padding:30px;box-shadow:0 40px 100px rgba(0,0,0,.7)}
@@ -455,6 +492,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
   <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.3v5.4l4.6-2.7z" fill="currentColor"/></g></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></g></symbol>
   <symbol id="i-note" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h10l4 4v14H5z"/><path d="M8.5 10h7M8.5 14h7M8.5 18h4"/></g></symbol>
   <symbol id="i-wallet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/></g></symbol>
   <symbol id="i-repeat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></g></symbol>
@@ -491,6 +529,7 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
     <a href="#ticket" data-nav="ticket"><svg><use href="#i-ticket"/></svg><span>Ticket</span></a>
     <a href="#wishlist" data-nav="wishlist"><svg><use href="#i-star"/></svg><span>Wishlist</span></a>
     <a href="#finanze" data-nav="finanze"><svg><use href="#i-wallet"/></svg><span>Finanze</span></a>
+    <a href="#diary" data-nav="diary"><svg><use href="#i-book"/></svg><span>Diary</span></a>
     <a href="#note" data-nav="note"><svg><use href="#i-note"/></svg><span>Note</span></a>
   </nav>
   <div class="tright"><span class="sync" id="sync">Connessione…</span><button class="ibtn" id="add-btn" aria-label="Aggiungi al volo"><svg><use href="#i-plus"/></svg></button><button class="ibtn" id="menu-btn" aria-label="Menu: backup, installa, esci"><svg><use href="#i-menu"/></svg></button></div>
@@ -566,6 +605,21 @@ html{scrollbar-width:thin;scrollbar-color:#2c2c34 transparent}
     <div class="gwrap" id="f-wrap" tabindex="0" aria-label="Foglio di calcolo"><table class="grid" id="f-grid"></table></div>
     <div class="fstat" id="f-stat"></div>
   </div>
+  </section>
+  <section class="view" id="v-diary" hidden>
+    <div class="hero">
+      <svg class="hero-art" viewBox="0 0 24 24"><use href="#i-book"/></svg>
+      <div class="hero-top"><div><p class="kicker" data-today></p><h1>Diary</h1><p class="sum" id="dy-sum">&nbsp;</p></div>
+        <div class="right"><button class="btn pri" id="dy-new"><svg><use href="#i-plus"/></svg>Nuovo appunto</button></div></div>
+      <div class="stats" id="dy-stats"></div>
+    </div>
+    <div class="dy-wrap">
+      <aside class="dy-side"><div class="dy-cats" id="dy-cats"></div></aside>
+      <div>
+        <div class="filters" style="margin-bottom:14px"><label class="srch"><svg><use href="#i-search"/></svg><input type="search" id="dy-q" placeholder="Cerca negli appunti, anche nei tag" aria-label="Cerca nel diary"></label><span id="dy-tagf"></span></div>
+        <div class="dy-list" id="dy-list"><div class="skel"></div></div>
+      </div>
+    </div>
   </section>
   <section class="view" id="v-note" hidden>
     <div class="hero">
