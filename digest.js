@@ -11,6 +11,8 @@
     scadenze: 'Abbonamenti e scadenze',
     spese: 'Spese del giorno e del mese',
     settimana: 'Riepilogo della settimana',
+    abitudini: 'Abitudini ancora da fare',
+    ripasso: 'Un appunto del Diary da ripassare',
     custom: 'Un messaggio scritto da me'
   };
   function rome(now) {
@@ -66,6 +68,31 @@
     var body = [head].concat(lines, rest > 0 && lines.length ? ['+ ' + rest + ' ' + plural(rest, 'altro', 'altri')] : [], al).join('\n');
     return { title: timeIcon(r.hour) + ' ' + greeting(r.hour) + (name ? ', ' + name : ''), body: body, badge: late + todayN, tag: 'capri-daily', url: './#oggi', today: today };
   }
+  function addDays(iso, n) { return new Date(utc(iso) + n * 864e5).toISOString().slice(0, 10); }
+  function dowOf(iso) { return (new Date(utc(iso)).getUTCDay() + 6) % 7; }
+  // Abitudini: giorni 0=lun…6=dom; done = { 'AAAA-MM-GG': 1 }
+  function habitOn(h, iso) { var d = Array.isArray(h.days) && h.days.length ? h.days : ALL; return d.indexOf(dowOf(iso)) >= 0; }
+  function habitStreak(h, today) {
+    var n = 0, d = today, done = h.done || {};
+    if (habitOn(h, d) && !done[d]) d = addDays(d, -1);
+    for (var i = 0; i < 800; i++) {
+      if (h.created && utc(d) < utc(new Date(+h.created).toISOString().slice(0, 10)) - 864e5) break;
+      if (habitOn(h, d)) { if (done[d]) n++; else break; }
+      d = addDays(d, -1);
+    }
+    return n;
+  }
+  function habitsLeft(habits, today) {
+    return (habits || []).filter(function (h) { return h && !h.archived && habitOn(h, today) && !(h.done || {})[today]; });
+  }
+  // Ripasso del Diary (ripetizione dilazionata): un appunto torna dopo 3, 7, 14, 30, 60, 120, 240 giorni
+  var REV = [3, 7, 14, 30, 60, 120, 240];
+  function reviewNext(x) { return x.rev && x.rev.next ? x.rev.next : addDays(String(x.date || '').slice(0, 10), 3); }
+  function reviewQueue(diary, today) {
+    return (diary || []).filter(function (x) { return x && (x.title || x.body) && /^\d{4}-\d{2}-\d{2}/.test(String(x.date || '')) && reviewNext(x) <= today; })
+      .sort(function (a, b) { return reviewNext(a).localeCompare(reviewNext(b)) || String(a.date).localeCompare(String(b.date)); });
+  }
+  function plain(t) { return String(t || '').replace(/```[\s\S]*?```/g, ' ').replace(/[#*`>_-]+/g, ' ').replace(/\s+/g, ' ').trim(); }
   function budget(cfg) {
     if (cfg.sbudget) return +cfg.sbudget;
     var b = (cfg.scats || []).reduce(function (s, x) { return s + (+x.b || 0); }, 0);
@@ -114,6 +141,19 @@
         '📅 In arrivo: ' + dueT + ' ' + plural(dueT, 'ticket', 'ticket') + ' e ' + dueA + ' ' + plural(dueA, 'pagamento', 'pagamenti')
       ];
       p = { title: '📊 La tua settimana' + (cfg.name ? ', ' + cfg.name : ''), body: lines.join('\n'), url: './#oggi' };
+    } else if (kind === 'abitudini') {
+      var left = habitsLeft(data.habits, today);
+      if (left.length) {
+        var risk = left.map(function (h) { return { h: h, s: habitStreak(h, today) }; }).filter(function (x) { return x.s >= 2; }).sort(function (a, b) { return b.s - a.s; })[0];
+        p = { title: '✅ ' + (left.length === 1 ? 'Ti manca un\'abitudine' : 'Ti mancano ' + left.length + ' abitudini'),
+          body: left.slice(0, 5).map(function (h) { return (h.emoji ? h.emoji + ' ' : '• ') + h.name; }).join('\n') + (risk ? '\n🔥 ' + risk.h.name + ': ' + risk.s + ' giorni di fila in gioco' : ''), url: './#oggi' };
+      }
+    } else if (kind === 'ripasso') {
+      var q = reviewQueue(data.diary, today);
+      if (q.length) {
+        var x = q[0], txt = plain(x.body);
+        p = { title: '🧠 Da ripassare: ' + (x.title || plain(x.body).slice(0, 40)), body: (txt ? (txt.length > 170 ? txt.slice(0, 167) + '…' : txt) : 'Apri Capri per ripassarlo.') + (q.length > 1 ? '\n(+' + (q.length - 1) + ' in coda)' : ''), url: './#oggi' };
+      }
     } else if (kind === 'custom') {
       if (slot.title || slot.text) p = { title: slot.title || 'Capri', body: slot.text || '', url: './#oggi' };
     }
@@ -124,5 +164,6 @@
     if (notify && Array.isArray(notify.slots) && notify.slots.length) return notify.slots;
     return [{ id: 's1', h: notify && notify.hour != null ? +notify.hour : 8, kind: notify && notify.abb === false ? 'ticket' : 'riepilogo', days: ALL.slice() }];
   }
-  g.CapriDigest = { build: build, forSlot: forSlot, slots: slots, rome: rome, KINDS: KINDS, ALL: ALL };
+  g.CapriDigest = { build: build, forSlot: forSlot, slots: slots, rome: rome, KINDS: KINDS, ALL: ALL,
+    addDays: addDays, dowOf: dowOf, habitOn: habitOn, habitStreak: habitStreak, habitsLeft: habitsLeft, REV: REV, reviewNext: reviewNext, reviewQueue: reviewQueue, plain: plain };
 })(typeof window !== 'undefined' ? window : globalThis);

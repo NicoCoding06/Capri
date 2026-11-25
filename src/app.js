@@ -195,7 +195,7 @@ function tCard(t){
   const ul=t.urg||2,u=URG[ul],c=catOf('tcats',t.cat),done=t.status==='fatto';
   const notes=t.notes||[],last=notes[notes.length-1],n=daysTo(t.due);
   return`<article class="tk${done?' done':''}" style="--u:${u.c}" data-id="${esc(t.id)}" tabindex="0">
-    <div class="tk-h"><div class="tk-tags"><span class="pill">${um(ul)}${u.n}</span>${t.cat?`<span class="chip" style="--c:${esc(c?c.c:'#9a9aa3')}">${esc(t.cat)}</span>`:''}<span class="st ${esc(t.status)}">${STAT[t.status]||'Aperto'}</span></div>${countdown(t)}</div>
+    <div class="tk-h"><div class="tk-tags"><span class="pill">${um(ul)}${u.n}</span>${t.cat?`<span class="chip" style="--c:${esc(c?c.c:'#9a9aa3')}">${esc(t.cat)}</span>`:''}<span class="st ${esc(t.status)}">${STAT[t.status]||'Aperto'}</span>${t.rep&&REP[t.rep]?`<span class="st rep" title="Si ripete ${REP[t.rep]}">↻ ${REP[t.rep]}</span>`:''}</div>${countdown(t)}</div>
     <h3>${esc(t.title||'Senza titolo')}</h3>
     ${t.desc?`<p class="desc">${esc(t.desc)}</p>`:''}
     <dl class="meta">
@@ -258,11 +258,22 @@ async function snooze(t,days){
   b.notes=(b.notes||[]).concat({t:Date.now(),x:`Scadenza spostata: ${fmtDate(t.due)} → ${fmtDate(due)}`});b.due=due;b.upd=Date.now();
   if(await put('tickets/'+t.id,b))toast(`#${t.num} spostato a ${days===1?'domani':fmtDate(due)}`,'ok');
 }
+/* Ticket ricorrenti: completandone uno, se "si ripete", nasce il prossimo con la nuova scadenza */
+const REP={g1:'ogni giorno',s1:'ogni settimana',s2:'ogni 2 settimane',m1:'ogni mese',m3:'ogni 3 mesi',m6:'ogni 6 mesi',a1:'ogni anno'};
+function nextDue(rep,from){const u=rep[0],n=+rep.slice(1)||1,today=isoDay();let d=addPeriod(from||today,n,u);for(let i=0;d<today&&i<500;i++)d=addPeriod(d,n,u);return d;}
+async function spawnNext(b){
+  if(!b.rep||!REP[b.rep]||b.repSpawned)return null;
+  b.repSpawned=true;const now=Date.now(),num=Math.max(0,...S.tickets.map(x=>+x.num||0))+1,id=uid(),due=nextDue(b.rep,b.due);
+  const n={title:b.title,cat:b.cat||'',urg:b.urg||2,status:'aperto',due,desc:b.desc||'',att:[],rep:b.rep,
+    notes:[{t:now,x:`Ricreato dal ticket #${b.num} (si ripete ${REP[b.rep]}).`}],created:now,upd:now,num};
+  await put('tickets/'+id,n);return{num,due};
+}
 async function toggleDone(t){
   const b=body(t);const done=t.status!=='fatto';
   b.status=done?'fatto':'aperto';b.upd=Date.now();if(done)b.doneAt=Date.now();else delete b.doneAt;
   b.notes=(b.notes||[]).concat({t:Date.now(),x:done?'Ticket completato.':'Ticket riaperto.'});
-  if(await put('tickets/'+t.id,b))toast(done?`#${t.num} completato`:`#${t.num} riaperto`,'ok');
+  const nx=done?await spawnNext(b):null;
+  if(await put('tickets/'+t.id,b))toast(done?`#${t.num} completato`+(nx?` · il prossimo (#${nx.num}) scade il ${fmtDate(nx.due)}`:''):`#${t.num} riaperto`,'ok');
 }
 function persistTicketPart(id,part){
   const base=S.tickets.find(t=>t.id===id);if(!base)return Promise.resolve(false);
@@ -281,6 +292,7 @@ function ticketModal(t){
     <div class="f full"><span>Macrocategoria${isNew?' <em class="req">scegline una</em>':''}</span><div class="chips" id="t-cat-pick">${cats.map(c=>`<label style="--c:${esc(c.c)}"><input type="radio" name="cat" value="${esc(c.n)}" ${c.n===d.cat?'checked':''}><b>${esc(c.n)}</b></label>`).join('')}<label style="--c:#6f6f7a"><input type="radio" name="cat" value="" ${!isNew&&!d.cat?'checked':''}><b>Nessuna</b></label></div></div>
     <label class="f"><span>Stato</span><select name="status">${Object.entries(STAT).map(([k,v])=>`<option value="${k}" ${d.status===k?'selected':''}>${v}</option>`).join('')}</select></label>
     <label class="f"><span>Scadenza</span><input type="date" name="due" value="${esc(d.due||'')}"></label>
+    <label class="f"><span>Si ripete</span><select name="rep"><option value="">Mai</option>${Object.entries(REP).map(([k,v])=>`<option value="${k}" ${d.rep===k?'selected':''}>${v[0].toUpperCase()+v.slice(1)}</option>`).join('')}</select></label>
     <div class="f full"><span>Scadenza rapida</span><div class="snz" id="t-snz"><button type="button" data-sz="0">Oggi</button><button type="button" data-sz="1">Domani</button><button type="button" data-sz="3">+3 giorni</button><button type="button" data-sz="7">+1 settimana</button><button type="button" data-sz="30">+1 mese</button><button type="button" data-sz="x">Nessuna</button></div></div>
     <label class="f full"><span>Descrizione</span><textarea name="desc" rows="7" placeholder="Tutti i dettagli: contesto, cosa serve, contatti, riferimenti…">${esc(d.desc)}</textarea></label>
   </form>
@@ -293,7 +305,7 @@ function ticketModal(t){
   const drawNotes=()=>{const el=$('#t-notes');if(!el)return;el.innerHTML=d.notes.length?d.notes.map((n,i)=>({n,i})).reverse().map(({n,i})=>`<li><time>${fmtTime(n.t)}</time>${esc(n.x)}<button class="btn sm ghost" data-nrm="${i}" aria-label="Elimina aggiornamento" type="button">×</button></li>`).join(''):'<li class="mut small">Ancora nessun aggiornamento.</li>';};
   drawAtt();drawNotes();S.redraw=drawAtt;
   $('#t-snz').addEventListener('click',e=>{const b=e.target.closest('[data-sz]');if(!b)return;const inp=$('#tf [name=due]');if(b.dataset.sz==='x'){inp.value='';return;}const base=new Date();base.setDate(base.getDate()+(+b.dataset.sz));inp.value=isoDay(base);});
-  const read=()=>{const fd=new FormData($('#tf'));d.title=String(fd.get('title')||'').trim();d.urg=+fd.get('urg')||2;d.cat=fd.get('cat')===null?null:String(fd.get('cat'));d.status=String(fd.get('status')||'aperto');d.due=String(fd.get('due')||'');d.desc=String(fd.get('desc')||'');};
+  const read=()=>{const fd=new FormData($('#tf'));d.title=String(fd.get('title')||'').trim();d.urg=+fd.get('urg')||2;d.cat=fd.get('cat')===null?null:String(fd.get('cat'));d.status=String(fd.get('status')||'aperto');d.due=String(fd.get('due')||'');d.desc=String(fd.get('desc')||'');d.rep=String(fd.get('rep')||'');if(!d.rep)delete d.rep;};
   async function addFiles(files){
     files=[...files];if(!files.length)return;
     ed.busy+=files.length;drawAtt();
@@ -323,6 +335,9 @@ function ticketModal(t){
     const prev=S.tickets.find(x=>x.id===d.id);
     if(b.status==='fatto'&&!b.doneAt)b.doneAt=Date.now();
     if(b.status!=='fatto')delete b.doneAt;
+    if(b.rep&&!b.due&&isNew)b.due=isoDay();
+    const nx=b.status==='fatto'&&(!prev||prev.status!=='fatto')?await spawnNext(b):null;
+    if(nx)setTimeout(()=>toast(`Il prossimo (#${nx.num}) scade il ${fmtDate(nx.due)}`,'ok'),300);
     if(prev&&prev.status!==b.status)b.notes=(b.notes||[]).concat({t:Date.now(),x:`Stato: ${STAT[prev.status]||'Aperto'} → ${STAT[b.status]}`});
     b.upd=Date.now();
     closeModal();
@@ -1196,7 +1211,7 @@ function renderOggi(){
   const cNotes=card('var(--nt)','note','Note fissate',['#note','Tutte'],pins.length?`<div class="onotes">${pins.map(n=>nCard(n,true)).join('')}</div>`:`<p class="mini">Fissa una nota per vederla qui.</p><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>noteModal(null))}">${ico('plus')}Nuova nota</button>`);
   const dl=S.diary.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||(b.created||0)-(a.created||0)).slice(0,3),stk=dStreak();
   const cDiary=card('var(--dy)','book','Diary',['#diary','Apri'],(dl.length?`<div class="rows">${dl.map(x=>`<button class="rowi" data-oa="${A(()=>diaryModal(x))}" style="--c:${esc(dcatCol(x.cat))}"><span class="dot"></span><span class="t">${esc(x.title||'Senza titolo')}</span><span class="s">${esc(relDays(daysTo(x.date)).replace('scaduto da','').replace('scaduto ieri','ieri').replace(/^ /,'')).replace(/^(\d+) giorni$/,'$1 giorni fa')}</span></button>`).join('')}</div>`:`<p class="mini">Cosa hai imparato oggi al lavoro?</p>`)+`${stk>1?`<p class="mini" style="margin-top:10px">🔥 ${stk} giorni di fila</p>`:''}<button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>diaryModal(null))}">${ico('plus')}Nuovo appunto</button>`);
-  $('#o-dash').innerHTML=cTodo+cMoney+cNext+cDiary+cWish+cNotes;
+  $('#o-dash').innerHTML=cTodo+habitsCard(card,A)+reviewCard(card,A)+cMoney+cNext+cDiary+cWish+cNotes;
 }
 $('#v-oggi').addEventListener('click',e=>{
   if(e.target.closest('.onotes')){onNoteClick(e);return;}
@@ -1214,8 +1229,9 @@ $('#add-btn').onclick=()=>{
     <button style="--c:var(--og)" data-q="abb">${ico('repeat')}Abbonamento<span>O una scadenza da ricordare</span></button>
     <button style="--c:var(--wl)" data-q="wish">${ico('star')}Desiderio<span>Da aggiungere alla wishlist</span></button>
     <button style="--c:var(--dy)" data-q="diary">${ico('book')}Diary<span>Una cosa imparata al lavoro</span></button>
+    <button style="--c:var(--cpg)" data-q="habit">${ico('check')}Abitudine<span>Una cosa da fare ogni giorno</span></button>
   </div>`);
-  DLG.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const k=b.dataset.q;closeModal();if(k==='wish')wishModal(null);else if(k==='diary')diaryModal(null);else quickAdd(k);});
+  DLG.querySelector('.quick').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(!b)return;const k=b.dataset.q;closeModal();if(k==='wish')wishModal(null);else if(k==='diary')diaryModal(null);else if(k==='habit')habitModal(null);else quickAdd(k);});
 };
 
 /* ================= NOTIFICHE ================= */
@@ -1262,7 +1278,7 @@ async function disableNotif(){
   const id=myPushId();if(id)await drop('push/'+id);try{localStorage.removeItem('capri-push-id');}catch(e){}
 }
 const DAYS=['L','M','M','G','V','S','D'];
-const notifData=()=>({tickets:S.tickets,abb:S.abb,spese:S.spese,diary:S.diary,cfg:{name:cfg().name,scats:cfg().scats,sbudget:cfg().sbudget}});
+const notifData=()=>({tickets:S.tickets,abb:S.abb,spese:S.spese,diary:S.diary,habits:hList(),cfg:{name:cfg().name,scats:cfg().scats,sbudget:cfg().sbudget}});
 function previewDigest(){const sl=CapriDigest.slots(notifCfg())[0];return CapriDigest.forSlot(sl,notifData(),new Date());}
 async function testNotif(slot){
   const sl=slot||CapriDigest.slots(notifCfg())[0];
@@ -1312,7 +1328,7 @@ function notifModal(){
   const saveCfg=async()=>{
     for(const x of list)if(x.kind==='custom'&&!x.title.trim()&&!x.text.trim()){toast('Scrivi il testo del messaggio personale','err');return false;}
     list.sort((a,b)=>a.h-b.h);
-    await put('config/main',{...(S.cfg||{}),notify:{on:true,weeklyAdded:true,slots:list.map(x=>({id:x.id,h:x.h,kind:x.kind,days:x.days,...(x.kind==='custom'?{title:x.title.trim(),text:x.text.trim()}:{})}))}});
+    await put('config/main',{...(S.cfg||{}),notify:{...notifCfg(),on:true,weeklyAdded:true,slots:list.map(x=>({id:x.id,h:x.h,kind:x.kind,days:x.days,...(x.kind==='custom'?{title:x.title.trim(),text:x.text.trim()}:{})}))}});
     return true;
   };
   $('#nt-on').onclick=async()=>{const b=$('#nt-on');b.disabled=true;if(!await saveCfg()){b.disabled=false;return;}
@@ -1437,6 +1453,135 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setInterval(()=>{if(wakeWanted()&&document.visibilityState==='visible'&&!wakeActive())wakeOn();},30000);
 wakeOn();
 
+/* ================= CALENDARIO ================= */
+S.calMonth=isoDay().slice(0,7);S.calSel=isoDay();let CACT=[];
+const MONTHF=new Intl.DateTimeFormat('it-IT',{month:'long',year:'numeric'});
+function calEvents(from,to){
+  const ev={},add=(d,e)=>{if(d>=from&&d<=to)(ev[d]=ev[d]||[]).push(e);},t=isoDay();
+  for(const k of S.tickets){if(k.status==='fatto'||!k.due)continue;const c=URG[k.urg||2].c;
+    add(k.due,{k:'t',o:0,c:k.due<t?'var(--u4)':c,late:k.due<t,l:k.title||'Ticket',s:'#'+(k.num||''),a:()=>ticketModal(k)});
+    if(k.rep&&REP[k.rep]){let d=k.due;for(let i=0;i<60;i++){d=addPeriod(d,+k.rep.slice(1)||1,k.rep[0]);if(d>to)break;add(d,{k:'t',o:0,c,ghost:true,l:'↻ '+(k.title||'Ticket'),s:'si ripete',a:()=>ticketModal(k)});}}}
+  for(const x of S.abb){if(x.active===false||!x.next)continue;let d=x.next;
+    for(let i=0;i<400&&d<=to;i++){add(d,{k:'p',o:1,c:'var(--og)',l:(x.kind==='doc'?'📄 ':'💳 ')+x.name,s:x.amt?eur(+x.amt):'',a:()=>payModal(x)});if(x.kind==='doc')break;d=addPeriod(d,x.n,x.u||'m');}}
+  for(const x of S.diary){const d=String(x.date||'').slice(0,10);if(d)add(d,{k:'d',o:2,c:'var(--dy)',l:'📒 '+(x.title||'Appunto'),s:'',a:()=>diaryModal(x)});}
+  for(const d in ev)ev[d].sort((a,b)=>a.o-b.o||(b.late?1:0)-(a.late?1:0));
+  return ev;
+}
+function renderCal(){
+  if(!S.ready)return;CACT=[];const A=fn=>{CACT.push(fn);return CACT.length-1;};
+  const [y,m]=S.calMonth.split('-').map(Number),first=new Date(y,m-1,1),start=new Date(first);start.setDate(1-((first.getDay()+6)%7));
+  const days=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return isoDay(d);});
+  const last=days[35].slice(0,7)===S.calMonth?42:35,grid=days.slice(0,last),t=isoDay();
+  const ev=calEvents(grid[0],grid[grid.length-1]),hs=hList();
+  $('#c-title').textContent=MONTHF.format(first);
+  $('#c-grid').innerHTML=DAYS.map(d=>`<div class="dow">${d}</div>`).join('')+grid.map(d=>{
+    const e=ev[d]||[],out=d.slice(0,7)!==S.calMonth;
+    const hOn=d<=t?hs.filter(h=>CapriDigest.habitOn(h,d)):[],hDone=hOn.filter(h=>(h.done||{})[d]).length;
+    return`<button class="cday${out?' out':''}${d===t?' today':''}${d===S.calSel?' sel':''}" data-cd="${d}" type="button" aria-label="${esc(DAYF.format(new Date(d+'T12:00')))}${e.length?`, ${e.length} ${plural(e.length,'evento','eventi')}`:''}">
+      <span class="n">${+d.slice(8)}</span>${hOn.length&&hDone?`<span class="chab${hDone===hOn.length?' full':''}" title="Abitudini ${hDone}/${hOn.length}"></span>`:''}
+      ${e.slice(0,3).map(x=>`<span class="cev${x.ghost?' ghost':''}${x.late?' late':''}" style="--c:${x.c}">${esc(x.l)}</span>`).join('')}${e.length>3?`<span class="cmore">+${e.length-3}</span>`:''}
+      ${e.length?`<span class="cdots">${e.slice(0,4).map(x=>`<i style="--c:${x.c}"></i>`).join('')}</span>`:''}</button>`;}).join('');
+  const inMonth=Object.entries(ev).filter(([d])=>d.slice(0,7)===S.calMonth),nT=inMonth.reduce((s,[,e])=>s+e.filter(x=>x.k==='t'&&!x.ghost).length,0),nP=inMonth.reduce((s,[,e])=>s+e.filter(x=>x.k==='p').length,0);
+  $('#c-sum').innerHTML=`In ${esc(MONTHF.format(first).split(' ')[0])}: <b>${nT}</b> ${plural(nT,'ticket in scadenza','ticket in scadenza')} e <b>${nP}</b> ${plural(nP,'pagamento','pagamenti')}.`;
+  // giorno scelto
+  const sd=S.calSel,se=calEvents(sd,sd)[sd]||[],sp=S.spese.filter(x=>x.d===sd),spT=sp.reduce((s,x)=>s+(+x.amt||0),0);
+  const hOn=sd<=t?hs.filter(h=>CapriDigest.habitOn(h,sd)):[],hDone=hOn.filter(h=>(h.done||{})[sd]);
+  const rows=se.map(x=>`<button class="rowi" data-ca="${A(x.a)}" style="--c:${x.c}"><span class="dot"></span><span class="t">${esc(x.l)}</span><span class="s">${esc(x.s)}</span></button>`);
+  if(sp.length)rows.push(`<a class="rowi" href="#spese" style="--c:var(--fn)"><span class="dot"></span><span class="t">${sp.length} ${plural(sp.length,'spesa','spese')}</span><span class="s">${eur(spT)}</span></a>`);
+  if(hOn.length)rows.push(`<div class="rowi" style="--c:var(--cpg);cursor:default"><span class="dot"></span><span class="t">Abitudini ${hDone.length}/${hOn.length}</span><span class="s">${hDone.map(h=>esc(h.emoji||'•')).join(' ')}</span></div>`);
+  const rel=daysTo(sd);
+  $('#c-day').innerHTML=`<h2>${ico('cal')}<span style="text-transform:capitalize">${esc(DAYF.format(new Date(sd+'T12:00')))}</span></h2>
+    <p class="mini" style="margin:-8px 0 12px">${rel===0?'Oggi':rel===1?'Domani':rel===-1?'Ieri':rel>0?`Tra ${rel} giorni`:`${-rel} giorni fa`}</p>
+    ${rows.length?`<div class="rows">${rows.join('')}</div>`:'<p class="mini">Niente in questo giorno.</p>'}
+    ${sd>=t?`<button class="btn sm ghost" style="margin-top:12px;width:100%" data-ca="${A(()=>{ticketModal(null);setTimeout(()=>{const i=$('#tf [name=due]');if(i)i.value=sd;},30);})}">${ico('plus')}Ticket con scadenza in questo giorno</button>`:''}`;
+  renderCalSync();
+}
+function calFeedUrl(){const f=CACHE.calfeed&&CACHE.calfeed.get('main');const C=getCfg()||{};return f&&f.token&&C.url?`${C.url}/storage/v1/object/public/calendario/${f.token}.ics`:'';}
+function renderCalSync(){
+  const el=$('#c-sync');if(!el)return;const url=calFeedUrl(),st=CACHE.calstate&&CACHE.calstate.get('main');
+  const ready=st&&st.at&&url&&st.file===url.split('/').pop();
+  el.innerHTML=`<h2>${ico('cal')}Calendario dell'iPhone</h2><div class="csync">
+    ${url?`<p class="mini" style="margin-top:-6px">${ready?`✅ Aggiornato ${esc(ago(st.at))} · ${st.events} eventi. L'iPhone lo ricontrolla da solo.`:'⏳ Il link sarà pronto entro un\'ora (lo prepara il controllo automatico orario).'}</p>
+      <p class="mini">Dall'iPhone tocca <b>Aggiungi al Calendario</b> e conferma con “Abbonati”. Compaiono ticket con scadenza e pagamenti, sempre aggiornati.</p>
+      <div class="ip-b"><a class="btn sm pri" href="${esc(url.replace(/^https:/,'webcal:'))}">Aggiungi al Calendario</a><button class="btn sm" type="button" data-ca="${CACT.push(async()=>{if(await copyText(url))toast('Link copiato','ok');})-1}">Copia link</button></div>
+      <p class="mini" style="margin-top:12px">Il link è privato: chi lo ha può vedere titoli e date. <button class="btn sm ghost" type="button" data-ca="${CACT.push(()=>calNewToken(true))-1}">Cambia link</button></p>`
+    :`<p class="mini" style="margin-top:-6px">Vedi scadenze dei ticket e pagamenti direttamente nel Calendario dell'iPhone (o di Google, Outlook…), aggiornati ogni ora.</p>
+      <button class="btn sm pri" type="button" style="margin-top:10px" data-ca="${CACT.push(()=>calNewToken(false))-1}">Crea il link privato</button>`}</div>`;
+}
+const ago=ms=>{const m=Math.round((Date.now()-ms)/60000);return m<1?'adesso':m<60?`${m} min fa`:m<1440?`${Math.round(m/60)} ${plural(Math.round(m/60),'ora','ore')} fa`:`${Math.round(m/1440)} ${plural(Math.round(m/1440),'giorno','giorni')} fa`;};
+async function calNewToken(again){
+  if(again&&!confirm('Il vecchio link smette di funzionare: sull\'iPhone dovrai abbonarti di nuovo. Continuare?'))return;
+  const old=CACHE.calfeed&&CACHE.calfeed.get('main');const b=crypto.getRandomValues(new Uint8Array(24));
+  const token='cal_'+b64u(b.buffer);const prev=[...((old&&old.prev)||[]),...(old&&old.token?[old.token]:[])].slice(-5);
+  if(await put('calfeed/main',{token,prev,created:Date.now()}))toast(again?'Nuovo link creato: pronto entro un\'ora':'Link creato: sarà pronto entro un\'ora','ok');renderCal();
+}
+$('#c-grid').addEventListener('click',e=>{const b=e.target.closest('[data-cd]');if(!b)return;S.calSel=b.dataset.cd;if(S.calSel.slice(0,7)!==S.calMonth)S.calMonth=S.calSel.slice(0,7);renderCal();
+  if(matchMedia('(max-width:1000px)').matches)$('#c-day').scrollIntoView({behavior:'smooth',block:'start'});});
+$('#v-calendario').addEventListener('click',e=>{const b=e.target.closest('[data-ca]');if(b){const f=CACT[+b.dataset.ca];if(f)f();}});
+const calShift=n=>{const [y,m]=S.calMonth.split('-').map(Number);const d=new Date(y,m-1+n,1);S.calMonth=isoDay(d).slice(0,7);renderCal();};
+$('#c-prev').onclick=()=>calShift(-1);$('#c-next').onclick=()=>calShift(1);$('#c-today').onclick=()=>{S.calMonth=isoDay().slice(0,7);S.calSel=isoDay();renderCal();};
+
+/* ================= ABITUDINI ================= */
+S.habits=[];
+const HCOL=['#3dff9a','#ff2e93','#43b3ff','#ffb547','#b794ff','#22d3ee','#ffd60a'];
+const HEMO=['💧','📚','🏃','🧘','💪','🥗','😴','🚭','🎸','🧠','✍️','🌱','💊','🧹','🇬🇧','📵'];
+const hList=()=>S.habits.filter(h=>!h.archived).sort((a,b)=>(a.order??a.created??0)-(b.order??b.created??0));
+async function habitToggle(h,day=isoDay()){
+  const cur=S.habits.find(x=>x.id===h.id)||h;const b=body(cur);b.done={...(b.done||{})};
+  if(b.done[day])delete b.done[day];else b.done[day]=1;b.upd=Date.now();await put('habits/'+h.id,b);
+  if(b.done[day]){const st=CapriDigest.habitStreak(b,isoDay());if([3,7,14,21,30,50,100,200,365].includes(st))toast(`🔥 ${cur.name}: ${st} giorni di fila!`,'ok');
+    else if(!CapriDigest.habitsLeft(hList().map(x=>x.id===h.id?b:x),isoDay()).length&&hList().length>1)toast('Tutte le abitudini di oggi fatte ✨','ok');}
+}
+function last7(h){const t=isoDay();return Array.from({length:7},(_,i)=>CapriDigest.addDays(t,i-6)).map(d=>({d,on:CapriDigest.habitOn(h,d),done:!!(h.done||{})[d]}));}
+function habitsCard(card,A){
+  const hs=hList(),t=isoDay();
+  if(!hs.length)return card('var(--cpg)','check','Abitudini',null,`<p class="mini">Piccole cose da fare ogni giorno: bere acqua, leggere, allenarti. Le spunti qui e vedi quanti giorni di fila le porti avanti.</p><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>habitModal(null))}">${ico('plus')}Prima abitudine</button>`);
+  const today=hs.filter(h=>CapriDigest.habitOn(h,t)),done=today.filter(h=>(h.done||{})[t]).length;
+  const rows=hs.map(h=>{const on=CapriDigest.habitOn(h,t),dn=!!(h.done||{})[t],st=CapriDigest.habitStreak(h,t);
+    return`<div class="hrow${dn?' done':''}${on?'':' rest'}" style="--c:${esc(h.color||HCOL[0])}"><button class="hck" data-oa="${A(()=>habitToggle(h))}" aria-pressed="${dn}" aria-label="${esc(h.name)}">${dn?'✓':''}</button>
+      <button class="hname" data-oa="${A(()=>habitModal(h))}"><span class="he">${esc(h.emoji||'•')}</span><b>${esc(h.name)}</b>${on?'':'<em>oggi riposo</em>'}</button>
+      <span class="h7" aria-hidden="true">${last7(h).map(x=>`<i class="${x.done?'y':x.on?(x.d===t?'t':'n'):'o'}"></i>`).join('')}</span><span class="hst" title="Giorni di fila">${st?'🔥'+st:''}</span></div>`;}).join('');
+  return card('var(--cpg)','check',`Abitudini<span class="hprog">${done}/${today.length}</span>`,null,`<div class="hl">${rows}</div><button class="btn sm ghost" style="margin-top:12px;width:100%" data-oa="${A(()=>habitModal(null))}">${ico('plus')}Nuova abitudine</button>`);
+}
+function habitModal(h){
+  const isNew=!h;const d=h?clone(h):{id:uid(),name:'',emoji:'💧',color:HCOL[hList().length%HCOL.length],days:CapriDigest.ALL.slice(),done:{},created:Date.now()};
+  d.days=Array.isArray(d.days)&&d.days.length?d.days:CapriDigest.ALL.slice();
+  const st=isNew?0:CapriDigest.habitStreak(d,isoDay()),tot=Object.keys(d.done||{}).length;
+  openModal(`<div class="mh"><h2>${isNew?'Nuova abitudine':'Abitudine'}</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <form class="form" id="hf" autocomplete="off">
+    <label class="f full"><span>Nome</span><input name="name" maxlength="60" value="${esc(d.name)}" placeholder="Es. Bere 2 litri d'acqua" autofocus required></label>
+    <div class="f full"><span>Simbolo</span><div class="emo" id="h-emo">${HEMO.map(e=>`<button type="button" class="${e===d.emoji?'on':''}" data-e="${e}">${e}</button>`).join('')}<input id="h-emo-x" maxlength="4" placeholder="Altro" value="${HEMO.includes(d.emoji)?'':esc(d.emoji||'')}" aria-label="Altro simbolo"></div></div>
+    <div class="f full"><span>Colore</span><div class="swatches">${HCOL.map(c=>`<label><input type="radio" name="hc" value="${c}" ${c===d.color?'checked':''}><i style="--c:${c}"></i></label>`).join('')}</div></div>
+    <div class="f full"><span>In quali giorni</span><div class="sl-days" id="h-days">${DAYS.map((x,j)=>`<button type="button" class="${d.days.includes(j)?'on':''}" data-d="${j}" aria-pressed="${d.days.includes(j)}">${x}</button>`).join('')}</div></div>
+  </form>
+  ${isNew?'':`<p class="mini">🔥 ${st} ${plural(st,'giorno','giorni')} di fila · fatta ${tot} ${plural(tot,'volta','volte')} in tutto. Puoi spuntare anche ieri: <button class="btn sm ghost" type="button" id="h-yday">${(d.done||{})[CapriDigest.addDays(isoDay(),-1)]?'Togli ieri':'Segna fatta ieri'}</button></p>`}
+  <div class="mf">${isNew?'':'<button class="btn danger" id="h-del" type="button">Elimina</button>'}<span class="sp"></span><button class="btn ghost" data-close type="button">Annulla</button><button class="btn pri" id="h-save" type="button">${isNew?'Aggiungi':'Salva'}</button></div>`);
+  $('#h-emo').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b)return;d.emoji=b.dataset.e;$('#h-emo-x').value='';$$('#h-emo [data-e]').forEach(x=>x.classList.toggle('on',x===b));});
+  $('#h-days').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;const j=+b.dataset.d;d.days=d.days.includes(j)?d.days.filter(x=>x!==j):d.days.concat(j).sort();b.classList.toggle('on');b.setAttribute('aria-pressed',d.days.includes(j));});
+  const yb=$('#h-yday');if(yb)yb.onclick=async()=>{await habitToggle(d,CapriDigest.addDays(isoDay(),-1));closeModal();};
+  const del=$('#h-del');if(del)del.onclick=async()=>{if(!armed(del,'Conferma'))return;closeModal();await drop('habits/'+d.id);toast('Abitudine eliminata','ok');};
+  $('#h-save').onclick=async()=>{
+    const fd=new FormData($('#hf'));d.name=String(fd.get('name')||'').trim();if(!d.name){toast('Dai un nome all\'abitudine','err');return;}
+    const ex=$('#h-emo-x').value.trim();if(ex)d.emoji=ex;d.color=String(fd.get('hc')||d.color);if(!d.days.length){toast('Scegli almeno un giorno','err');return;}
+    const cur=S.habits.find(x=>x.id===d.id);if(cur)d.done=cur.done||{};d.upd=Date.now();
+    closeModal();await put('habits/'+d.id,body(d));toast(isNew?'Abitudine aggiunta':'Salvata','ok');if(isNew)addWeekly().catch(()=>{});
+  };
+}
+
+/* ================= RIPASSO DEL DIARY ================= */
+function reviewCard(card,A){
+  const q=CapriDigest.reviewQueue(S.diary,isoDay());if(!q.length)return'';
+  const x=q[0],n=(x.rev&&x.rev.n)||0;
+  return card('var(--dy)','book','Da ripassare',null,`<p class="mini" style="margin:-6px 0 10px">${n?`Ripasso n. ${n+1}`:'Primo ripasso'} · scritto il ${fmtDate(x.date)}${q.length>1?` · altri ${q.length-1} in coda`:''}</p>
+    <div class="rv">${x.title?`<b>${esc(x.title)}</b>`:''}<div class="md rv-b">${md(x.body||'')}</div></div>
+    <div class="rv-a"><button class="btn sm ok" data-oa="${A(()=>reviewDone(x,true))}">✓ Me lo ricordo</button><button class="btn sm ghost" data-oa="${A(()=>reviewDone(x,false))}">Rivedilo domani</button><button class="btn sm ghost" data-oa="${A(()=>diaryModal(x))}">Apri</button></div>`);
+}
+async function reviewDone(x,ok){
+  const t=isoDay(),R=CapriDigest.REV,n=ok?((x.rev&&x.rev.n)||0)+1:0,days=ok?R[Math.min(n,R.length-1)]:1;
+  const cur=S.diary.find(y=>y.id===x.id)||x;const b=body(cur);b.rev={n,next:CapriDigest.addDays(t,days),last:t};
+  if(await put('diary/'+x.id,b))toast(ok?`Bene! Torna tra ${days} giorni`:'Lo rivedi domani','ok');
+}
+
 /* ================= SICUREZZA DELL'ACCOUNT ================= */
 async function securityModal(){
   const at=await loginAt();const until=at?new Date(at+LOGIN_TTL):null;
@@ -1447,11 +1592,25 @@ async function securityModal(){
       ${f?'<button class="btn sm danger" id="sc-mfa-off" type="button">Disattiva</button>':'<button class="btn sm pri" id="sc-mfa-on" type="button">Attiva</button>'}</div>
     <div id="sc-enroll"></div>
     ${f?`<div class="sec-row"><div><b>Rendila obbligatoria anche per il database</b><p class="mini">Senza il codice, il database rifiuta ogni richiesta, anche fuori dal sito. Copia il codice, incollalo nel <a href="${SUPA_SQL()}" target="_blank" rel="noopener">SQL Editor di Supabase</a> e premi Run. Widget, Siri e notifiche continuano a funzionare.</p></div><button class="btn sm" data-sqlcp type="button">Copia SQL</button></div>`:''}
+    <div class="sec-row"><div style="flex:1"><b>Face ID / impronta</b><p class="mini">Entri con il volto o l'impronta invece della password. La chiave resta nel portachiavi del dispositivo (con iCloud vale anche sugli altri tuoi dispositivi Apple).</p><div class="pk-list" id="sc-pk-list"></div></div>
+      <button class="btn sm pri" id="sc-pk-add" type="button"${pkSupported()?'':' disabled title="Questo browser non lo supporta"'}>Aggiungi questo dispositivo</button></div>
     <form class="sec-row" id="sc-pw"><div style="flex:1"><b>Cambia password</b><p class="mini">Almeno 10 caratteri. Meglio una frase lunga.</p>
       <div class="sec-pw"><input type="password" id="sc-p1" autocomplete="new-password" placeholder="Nuova password" minlength="10" required><input type="password" id="sc-p2" autocomplete="new-password" placeholder="Ripetila" minlength="10" required></div></div>
       <button class="btn sm" type="submit">Salva</button></form>
     <div class="sec-row"><div><b>Esci da tutti i dispositivi</b><p class="mini">Utile se hai usato un computer non tuo o hai perso il telefono. ${until?`Su questo dispositivo l'accesso scade il ${until.toLocaleDateString('it-IT',{day:'numeric',month:'long'})} alle ${until.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}.`:''}</p></div><button class="btn sm danger" id="sc-out" type="button">Esci ovunque</button></div>
   </div>`,{wide:true});
+  const drawPk=async()=>{const el=$('#sc-pk-list');if(!el)return;
+    try{const{data,error}=await SB.auth.passkey.list();if(error)throw error;const l=Array.isArray(data)?data:(data&&(data.passkeys||data.items))||[];
+      el.innerHTML=l.length?l.map(k=>`<div>🔑<span><b>${esc(k.friendly_name||'Passkey')}</b><br><span class="mini">aggiunta il ${fmtDate(k.created_at)}${k.last_used_at?` · usata ${esc(ago(Date.parse(k.last_used_at)))}`:''}</span></span><button class="btn sm ghost" type="button" data-pkdel="${esc(k.id)}">Rimuovi</button></div>`).join(''):'<p class="mini" style="margin:0">Nessun dispositivo collegato.</p>';}
+    catch(e){el.innerHTML=`<p class="mini" style="margin:0">${esc(pkErr(e)||errMsg(e))}</p>`;}};
+  drawPk();
+  $('#sc-pk-list').addEventListener('click',async e=>{const b=e.target.closest('[data-pkdel]');if(!b||!armed(b,'Conferma'))return;
+    const{error}=await SB.auth.passkey.delete({passkeyId:b.dataset.pkdel});if(error){toast('Non riuscito: '+errMsg(error),'err');return;}toast('Dispositivo rimosso','ok');drawPk();});
+  $('#sc-pk-add').onclick=async()=>{const b=$('#sc-pk-add');b.disabled=true;
+    try{const{data,error}=await SB.auth.registerPasskey();if(error)throw error;
+      const id=data&&(data.id||(data.passkey&&data.passkey.id));if(id)try{await SB.auth.passkey.update({passkeyId:id,friendlyName:pkName()+' · '+new Date().toLocaleDateString('it-IT')});}catch(e){}
+      try{localStorage.setItem('capri-passkey','1');}catch(e){}toast('Fatto: la prossima volta entri con Face ID','ok');drawPk();}
+    catch(e){const m=pkErr(e);if(m)toast(m,'err');}b.disabled=false;};
   const on=$('#sc-mfa-on');
   if(on)on.onclick=async()=>{on.disabled=true;
     try{const old=await SB.auth.mfa.listFactors();for(const x of((old.data&&(old.data.all||old.data.totp))||[]).filter(x=>x.status!=='verified'&&(x.factor_type||'totp')==='totp'))await SB.auth.mfa.unenroll({factorId:x.id});
@@ -1490,10 +1649,13 @@ function beatText(){const h=lastBeat();if(!h)return'Nessun segnale ancora regist
 
 /* ================= RIEPILOGO SETTIMANALE (una volta sola) ================= */
 async function addWeekly(){
-  const n=(S.cfg&&S.cfg.notify)||null;if(!S.cfg||(n&&n.weeklyAdded))return;
-  const sl=clone(CapriDigest.slots(notifCfg()));
-  if(!sl.some(x=>x.kind==='settimana'))sl.push({id:'sw',h:9,kind:'settimana',days:[0]});
-  await put('config/main',{...S.cfg,notify:{...notifCfg(),slots:sl,weeklyAdded:true}});
+  if(!S.cfg)return;const n=notifCfg();
+  const want=[['weeklyAdded',{id:'sw',h:9,kind:'settimana',days:[0]}],['reviewAdded',{id:'rv',h:18,kind:'ripasso',days:CapriDigest.ALL.slice()}]];
+  if(S.habits.some(h=>!h.archived))want.push(['habitsAdded',{id:'hb',h:21,kind:'abitudini',days:CapriDigest.ALL.slice()}]);
+  const todo=want.filter(([f])=>!n[f]);if(!todo.length)return;
+  const sl=clone(CapriDigest.slots(n)),flags={};
+  for(const [f,slot] of todo){flags[f]=true;if(!sl.some(x=>x.kind===slot.kind)&&sl.length<8)sl.push(slot);}
+  await put('config/main',{...S.cfg,notify:{...n,...flags,slots:sl}});
 }
 
 /* ================= iPHONE: widget e Siri (Scriptable) ================= */
@@ -1578,14 +1740,14 @@ $('#menu-btn').onclick=()=>{
     let j;try{j=JSON.parse(await f.text());}catch(err){toast('File di backup non valido','err');return;}
     if(!j||j.app!=='capri'){toast('Questo non è un backup di Capri','err');return;}
     closeModal();let n=0;
-    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note','diary'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
+    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note','diary','habits'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
     toast(`Ripristinati ${n} elementi`,'ok');
   };
   $('#m-out').onclick=async()=>{await SB.auth.signOut();await authStorage.removeItem('capri-login-at');location.reload();};
 };
 
 /* ================= ROUTER + BOOT ================= */
-const VIEWS=['oggi','ticket','wishlist','finanze','diary','note'];
+const VIEWS=['oggi','ticket','wishlist','finanze','diary','note','calendario'];
 const HALIAS={spese:['finanze','spese'],abbonamenti:['finanze','abb'],fogli:['finanze','fogli']};
 function route(){
   const hh=location.hash.slice(1);let v=hh;if(HALIAS[hh]){v=HALIAS[hh][0];S.fsub=HALIAS[hh][1];}
@@ -1594,7 +1756,7 @@ function route(){
   S.view=v;document.body.dataset.v=v;
   VIEWS.forEach(x=>{$('#v-'+x).hidden=x!==v;});
   $$('[data-nav]').forEach(a=>{a.classList.toggle('on',a.dataset.nav===v);if(a.dataset.nav===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();else if(v==='diary')renderDiary();
+  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();else if(v==='diary')renderDiary();else if(v==='calendario')renderCal();
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
   scrollTo(0,0);
 }
@@ -1610,6 +1772,8 @@ SUBS.spese=docs=>{S.spese=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi()
 SUBS.abbonamenti=docs=>{S.abb=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi();finRefresh();};
 SUBS.push=()=>{renderOggi();};
 SUBS.diary=docs=>{S.diary=docs.map(d=>({...clone(d.data),id:d.id}));renderDiary();renderOggi();};
+SUBS.habits=docs=>{S.habits=docs.map(d=>({...clone(d.data),id:d.id}));renderOggi();};
+SUBS.calfeed=()=>{if(S.view==='calendario')renderCal();};SUBS.calstate=SUBS.calfeed;
 SUBS.note=docs=>{S.notes=docs.map(d=>({...clone(d.data),id:d.id}));renderNotes();renderOggi();};
 
 const gate=$('#gate');
@@ -1643,6 +1807,16 @@ $('#g-mfa').addEventListener('submit',async e=>{
   catch(err){$('#g-err3').textContent=/invalid|expired|code/i.test(errMsg(err))?'Codice non valido o scaduto: riprova con quello nuovo.':'Verifica non riuscita: '+errMsg(err);}
   b.disabled=false;b.textContent='Verifica';
 });
+/* Face ID / impronta: passkey di Supabase (le chiavi restano nel portachiavi del telefono) */
+const pkSupported=()=>!!(window.PublicKeyCredential&&navigator.credentials&&navigator.credentials.get);
+const pkHere=()=>{try{return localStorage.getItem('capri-passkey')==='1';}catch(e){return false;}};
+const pkName=()=>isIOS?(/ipad/i.test(navigator.userAgent)||navigator.maxTouchPoints>1&&!/iphone/i.test(navigator.userAgent)?'iPad':'iPhone'):/mac/i.test(navigator.platform||'')?'Mac':/android/i.test(navigator.userAgent)?'Android':/win/i.test(navigator.platform||'')?'PC Windows':'Browser';
+const pkErr=e=>{const m=errMsg(e);return/NotAllowed|abort|cancel/i.test((e&&e.name)||'')||/NotAllowed|aborted|cancel/i.test(m)?'':/disabled|not enabled|passkey.*(off|not)|404|not found/i.test(m)?'L\'accesso con Face ID non è ancora attivo su Supabase (Authentication → Passkeys).':m;};
+if(pkSupported()){const b=$('#g-pk');b.hidden=false;if(pkHere()){b.classList.add('lead','pri');b.classList.remove('ghost');$('#g-go').classList.replace('pri','ghost');}
+  b.onclick=async()=>{b.disabled=true;$('#g-err').textContent='';
+    try{const{data,error}=await SB.auth.signInWithPasskey();if(error)throw error;const ses=(data&&data.session)||(await SB.auth.getSession()).data.session;if(!ses)throw new Error('accesso non riuscito');
+      try{localStorage.setItem('capri-passkey','1');}catch(e){}await authStorage.setItem('capri-login-at',String(Date.now()));proceed(ses);}
+    catch(e){const m=pkErr(e);if(m)$('#g-err').textContent=m;}b.disabled=false;};}
 $('#g-mfa-out').onclick=async()=>{try{await SB.auth.signOut();}catch(e){}await authStorage.removeItem('capri-login-at');location.reload();};
 async function start(session){
   UID=session.user.id;EMAIL=session.user.email||'';gate.hidden=true;setSync('Caricamento…','warn');
@@ -1681,7 +1855,7 @@ async function boot(){
   const C=getCfg();
   if(!C){gateShow('setup','');return;}
   if(!window.supabase||!window.supabase.createClient){gateShow('',"Non riesco a caricare i componenti di Capri: controlla la connessione e ricarica la pagina.");return;}
-  SB=window.supabase.createClient(C.url,C.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'capri-auth',storage:authStorage}});
+  SB=window.supabase.createClient(C.url,C.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'capri-auth',storage:authStorage,experimental:{passkey:true}}});
   let session=null;
   for(let i=0;i<3&&!session;i++){try{const{data,error}=await SB.auth.getSession();session=data&&data.session;if(!session&&!error)break;}catch(e){}if(!session)await sleep(1200);}
   if(session){

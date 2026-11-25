@@ -9,6 +9,10 @@ on:
         description: 'Invia subito il riepilogo, senza aspettare l’orario'
         type: boolean
         default: true
+      caltest:
+        description: 'Prova anche il calendario (carica e cancella un file di prova)'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -46,6 +50,8 @@ jobs:
           SUPABASE_URL: https://vwprxhnprbbjfwgkrciy.supabase.co
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+          CALTEST: ${{ github.event_name == 'workflow_dispatch' && inputs.caltest }}
+          SITE_URL: https://nicocoding06.github.io/Capri/
       - name: Mantieni attiva la pianificazione
         if: github.event_name == 'schedule'
         run: |

@@ -21,8 +21,8 @@
    PICTURE: each section opens on a lit hero panel holding its live numbers, then the working board itself
    COLOUR and TYPE: near-black ground, white Helvetica; blue tickets, magenta wishes, green money; urgency green, yellow, orange, red
    LAYOUT: sticky top bar; hero panel; filters; board. Bottom tab bar on phones, safe areas respected */
-:root{color-scheme:dark;--bg:#08080a;--p1:#111114;--p2:#18181c;--p3:#222228;--line:#2a2a31;--line2:#383841;--ink:#fff;--mut:#a3a3ae;--dim:#6f6f7a;--tk:#4d8dff;--wl:#ff4fd8;--fn:#1fe08f;--og:#ffb547;--nt:#22d3ee;--wt:#a78bfa;--dy:#b794ff;--cpp:#ff2e93;--cpg:#3dff9a;--cpb:#43b3ff;--u1:#2ee27a;--u2:#ffd60a;--u3:#ff8a1f;--u4:#ff2d55;--acc:var(--tk);--r:16px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
-body[data-v=wishlist]{--acc:var(--wl)}body[data-v=finanze]{--acc:var(--fn)}body[data-v=oggi]{--acc:var(--og)}body[data-v=note]{--acc:var(--nt)}body[data-v=diary]{--acc:var(--dy)}
+:root{color-scheme:dark;--bg:#08080a;--p1:#111114;--p2:#18181c;--p3:#222228;--line:#2a2a31;--line2:#383841;--ink:#fff;--mut:#a3a3ae;--dim:#6f6f7a;--tk:#4d8dff;--wl:#ff4fd8;--fn:#1fe08f;--og:#ffb547;--nt:#22d3ee;--wt:#a78bfa;--dy:#b794ff;--cpp:#ff2e93;--cpg:#3dff9a;--cpb:#43b3ff;--cl:#ffb547;--u1:#2ee27a;--u2:#ffd60a;--u3:#ff8a1f;--u4:#ff2d55;--acc:var(--tk);--r:16px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+body[data-v=wishlist]{--acc:var(--wl)}body[data-v=finanze]{--acc:var(--fn)}body[data-v=oggi]{--acc:var(--og)}body[data-v=note]{--acc:var(--nt)}body[data-v=diary]{--acc:var(--dy)}body[data-v=calendario]{--acc:var(--cl)}
 *{box-sizing:border-box;min-width:0}
 html{background:var(--bg)}
 body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.5 Helvetica,"Helvetica Neue",Arial,sans-serif;overflow-x:clip;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
@@ -523,6 +523,55 @@ input:focus,select:focus,textarea:focus{border-color:var(--cpg);box-shadow:0 0 0
 .brand:hover svg{animation:breatheG 4.5s ease-in-out infinite,chipGlitch .5s steps(2) 1!important}
 @keyframes chipGlitch{0%{transform:translateX(-1px);filter:drop-shadow(-2px 0 var(--cpp)) drop-shadow(2px 0 var(--cpg))}100%{transform:none}}
 @media (prefers-reduced-motion:reduce){.view:not([hidden])>*,.hero::before,.brand:hover svg{animation:none!important}.card:hover,.stat:hover{transform:none}}
+.st.rep{color:var(--cpg);border-color:color-mix(in srgb,var(--cpg) 40%,transparent)}
+.hprog{margin-left:auto;font-size:13px;font-weight:700;color:var(--cpg);padding:2px 9px;border:1px solid color-mix(in srgb,var(--cpg) 40%,transparent);border-radius:999px}
+.card h2 .hprog+a{margin-left:8px}
+.hl{display:grid;gap:6px}
+.hrow{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)}
+.hrow.rest{opacity:.55}
+.hck{flex:none;width:38px;height:38px;border-radius:11px;border:2px solid var(--c);background:transparent;color:#000;font-weight:800;font-size:18px;cursor:pointer;box-shadow:0 0 10px -4px var(--c);transition:background .15s,transform .1s}
+.hck:active{transform:scale(.92)}.hrow.done .hck{background:var(--c);box-shadow:0 0 16px -2px var(--c)}
+.hname{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:4px 0}
+.hname b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hname em{font-style:normal;font-size:12px;color:var(--dim)}
+.hrow.done .hname b{color:var(--mut);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--c) 70%,transparent)}
+.he{font-size:18px;line-height:1}
+.h7{display:flex;gap:3px;flex:none}.h7 i{width:7px;height:16px;border-radius:3px;background:rgba(255,255,255,.08)}
+.h7 i.y{background:var(--c);box-shadow:0 0 6px -1px var(--c)}.h7 i.o{background:transparent;border:1px dashed rgba(255,255,255,.1)}.h7 i.t{background:transparent;border:1px solid var(--c)}
+.hst{flex:none;min-width:38px;text-align:right;font-size:13px;font-weight:700;color:var(--u3)}
+@media (max-width:420px){.h7{display:none}}
+.emo{display:flex;flex-wrap:wrap;gap:6px}.emo button{width:42px;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--p1);font-size:20px;cursor:pointer}
+.emo button.on{border-color:var(--cpg);box-shadow:0 0 0 1px var(--cpg),0 0 12px -4px var(--cpg)}.emo input{width:80px;min-height:42px}
+.rv{padding:12px 14px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid color-mix(in srgb,var(--dy) 30%,var(--line))}
+.rv>b{display:block;margin-bottom:6px;font-size:16px}.rv-b{max-height:190px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 75%,transparent);mask-image:linear-gradient(#000 75%,transparent)}
+.rv-a{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.nav a[data-nav=calendario].on svg{color:var(--cl)}
+@media(max-width:760px){.nav a.nav-desk{display:none}}
+.cal-nav{display:flex;gap:6px}.cal-nav .btn{min-width:48px;font-size:18px}.cal-nav #c-today{font-size:15px}
+.cal-wrap{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+@media(max-width:1000px){.cal-wrap{grid-template-columns:minmax(0,1fr)}}
+.cal-main{background:var(--p1);border:1px solid var(--line);border-radius:22px;padding:16px;position:relative}
+.cal-title{margin:0 0 12px;font-size:20px;text-transform:capitalize;letter-spacing:-.01em}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.cal .dow{font-size:12px;font-weight:700;color:var(--dim);text-align:center;padding:2px 0 4px;letter-spacing:.06em}
+.cday{position:relative;min-height:96px;display:flex;flex-direction:column;gap:3px;padding:6px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);cursor:pointer;text-align:left;font:inherit;color:inherit;overflow:hidden}
+.cday:hover{border-color:var(--line2)}.cday.out{opacity:.35}
+.cday .n{font-size:13px;font-weight:700;color:var(--mut);width:24px;height:24px;display:grid;place-items:center;border-radius:7px;flex:none}
+.cday.today .n{background:var(--cpp);color:#000;box-shadow:0 0 12px -2px var(--cpp)}
+.cday.sel{border-color:var(--cl);box-shadow:inset 0 0 0 1px var(--cl),0 0 20px -10px var(--cl)}
+.cev{font-size:11.5px;line-height:1.25;padding:2px 6px;border-radius:6px;background:color-mix(in srgb,var(--c) 16%,transparent);border-left:2px solid var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cev.ghost{background:transparent;border-left-style:dashed;color:var(--mut)}.cev.late{background:color-mix(in srgb,var(--u4) 22%,transparent);border-left-color:var(--u4)}
+.cmore{font-size:11px;color:var(--dim);padding-left:4px}
+.cdots{display:none;gap:3px;flex-wrap:wrap;margin-top:auto}.cdots i{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 5px -1px var(--c)}
+.chab{position:absolute;right:6px;top:8px;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--cpg)}.chab.full{background:var(--cpg);box-shadow:0 0 6px var(--cpg)}
+@media(max-width:700px){.cal{gap:3px}.cday{min-height:58px;padding:4px;border-radius:9px}.cev,.cmore{display:none}.cdots{display:flex}.cal-main{padding:10px}}
+.cal-leg{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:12px;color:var(--mut)}.cal-leg span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:6px}
+.cal-side{display:grid;gap:16px}
+.cal-side .rows .rowi .s{white-space:nowrap}
+.csync code{display:block;font-size:12px;word-break:break-all;background:#000;border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--cpb);margin:8px 0}
+.csync .ip-b{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+#g-pk{width:100%;margin-top:8px}#g-pk.lead{order:-1}
+.pk-list{display:grid;gap:6px;margin-top:10px}.pk-list div{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--line);font-size:14px}.pk-list span{flex:1;min-width:0}
+a.rowi{text-decoration:none}
 </style>
 </head>
 <body data-v="oggi">
@@ -547,6 +596,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--cpg);box-shadow:0 0 0
   <symbol id="i-note" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M5 3h10l4 4v14H5z"/><path d="M8.5 10h7M8.5 14h7M8.5 18h4"/></g></symbol>
   <symbol id="i-wallet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/></g></symbol>
   <symbol id="i-repeat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16.5 9"/></g></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></g></symbol>
+  <symbol id="i-face" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1"/><path d="M9.5 16a3.5 3.5 0 0 0 5 0"/></g></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/></g></symbol>
   <symbol id="i-bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></g></symbol>
   <symbol id="i-help" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.7-.9 1.3V14"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></g></symbol>
@@ -562,6 +614,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--cpg);box-shadow:0 0 0
       <label class="f"><span>Password</span><input type="password" id="g-pass" autocomplete="current-password" required></label>
       <p class="gerr" id="g-err"></p>
       <button class="btn pri" type="submit" id="g-go">Entra</button>
+      <button class="btn ghost" type="button" id="g-pk" hidden><svg><use href="#i-face"/></svg>Entra con Face ID</button>
     </form>
     <form id="g-mfa" hidden>
       <p class="small" style="margin:0">Verifica in due passaggi: apri l'app di autenticazione e scrivi il codice di 6 cifre per Capri.</p>
@@ -590,6 +643,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--cpg);box-shadow:0 0 0
     <a href="#finanze" data-nav="finanze"><svg><use href="#i-wallet"/></svg><span>Finanze</span></a>
     <a href="#diary" data-nav="diary"><svg><use href="#i-book"/></svg><span>Diary</span></a>
     <a href="#note" data-nav="note"><svg><use href="#i-note"/></svg><span>Note</span></a>
+    <a href="#calendario" data-nav="calendario" class="nav-desk"><svg><use href="#i-cal"/></svg><span>Calendario</span></a>
   </nav>
   <div class="tright"><span class="sync" id="sync">Connessione…</span><button class="ibtn" id="add-btn" aria-label="Aggiungi al volo"><svg><use href="#i-plus"/></svg></button><button class="ibtn" id="menu-btn" aria-label="Menu: backup, installa, esci"><svg><use href="#i-menu"/></svg></button></div>
 </header>
@@ -599,7 +653,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--cpg);box-shadow:0 0 0
     <div class="hero">
       <svg class="hero-art" id="o-art" viewBox="0 0 24 24"><use href="#i-home"/></svg>
       <div class="hero-top"><div><p class="kicker" data-today></p><h1 id="o-hi">Ciao</h1><p class="sum" id="o-sum">&nbsp;</p></div>
-        <div class="right qa"><button class="btn ghost" data-quick="ticket"><svg><use href="#i-ticket"/></svg>Ticket</button><button class="btn ghost" data-quick="nota"><svg><use href="#i-note"/></svg>Nota</button><button class="btn pri" data-quick="spesa"><svg><use href="#i-plus"/></svg>Spesa</button></div></div>
+        <div class="right qa"><button class="btn ghost" data-quick="ticket"><svg><use href="#i-ticket"/></svg>Ticket</button><button class="btn ghost" data-quick="nota"><svg><use href="#i-note"/></svg>Nota</button><a class="btn ghost" href="#calendario"><svg><use href="#i-cal"/></svg>Calendario</a><button class="btn pri" data-quick="spesa"><svg><use href="#i-plus"/></svg>Spesa</button></div></div>
     </div>
     <div class="alerts" id="o-alerts"></div>
     <div class="dash" id="o-dash"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
@@ -678,6 +732,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--cpg);box-shadow:0 0 0
         <div class="filters" style="margin-bottom:14px"><label class="srch"><svg><use href="#i-search"/></svg><input type="search" id="dy-q" placeholder="Cerca negli appunti, anche nei tag" aria-label="Cerca nel diary"></label><span id="dy-tagf"></span></div>
         <div class="dy-list" id="dy-list"><div class="skel"></div></div>
       </div>
+    </div>
+  </section>
+  <section class="view" id="v-calendario" hidden>
+    <div class="hero">
+      <svg class="hero-art" viewBox="0 0 24 24"><use href="#i-cal"/></svg>
+      <div class="hero-top"><div><p class="kicker" data-today></p><h1>Calendario</h1><p class="sum" id="c-sum">&nbsp;</p></div>
+        <div class="right"><div class="cal-nav"><button class="btn ghost" id="c-prev" aria-label="Mese precedente" type="button">‹</button><button class="btn ghost" id="c-today" type="button">Oggi</button><button class="btn ghost" id="c-next" aria-label="Mese successivo" type="button">›</button></div></div></div>
+    </div>
+    <div class="cal-wrap">
+      <div class="cal-main"><h2 class="cal-title" id="c-title"></h2><div class="cal" id="c-grid"></div>
+        <div class="cal-leg"><span style="--c:var(--tk)">Ticket</span><span style="--c:var(--og)">Pagamenti e scadenze</span><span style="--c:var(--dy)">Diary</span><span style="--c:var(--cpg)">Abitudini</span></div></div>
+      <aside class="cal-side"><div class="card" style="--c:var(--cl)" id="c-day"></div><div class="card" style="--c:var(--cpb)" id="c-sync"></div></aside>
     </div>
   </section>
   <section class="view" id="v-note" hidden>
