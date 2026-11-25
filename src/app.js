@@ -1261,7 +1261,7 @@ async function disableNotif(){
   const id=myPushId();if(id)await drop('push/'+id);try{localStorage.removeItem('capri-push-id');}catch(e){}
 }
 const DAYS=['L','M','M','G','V','S','D'];
-const notifData=()=>({tickets:S.tickets,abb:S.abb,spese:S.spese,cfg:{name:cfg().name,scats:cfg().scats,sbudget:cfg().sbudget}});
+const notifData=()=>({tickets:S.tickets,abb:S.abb,spese:S.spese,diary:S.diary,cfg:{name:cfg().name,scats:cfg().scats,sbudget:cfg().sbudget}});
 function previewDigest(){const sl=CapriDigest.slots(notifCfg())[0];return CapriDigest.forSlot(sl,notifData(),new Date());}
 async function testNotif(slot){
   const sl=slot||CapriDigest.slots(notifCfg())[0];
@@ -1311,7 +1311,7 @@ function notifModal(){
   const saveCfg=async()=>{
     for(const x of list)if(x.kind==='custom'&&!x.title.trim()&&!x.text.trim()){toast('Scrivi il testo del messaggio personale','err');return false;}
     list.sort((a,b)=>a.h-b.h);
-    await put('config/main',{...(S.cfg||{}),notify:{on:true,slots:list.map(x=>({id:x.id,h:x.h,kind:x.kind,days:x.days,...(x.kind==='custom'?{title:x.title.trim(),text:x.text.trim()}:{})}))}});
+    await put('config/main',{...(S.cfg||{}),notify:{on:true,weeklyAdded:true,slots:list.map(x=>({id:x.id,h:x.h,kind:x.kind,days:x.days,...(x.kind==='custom'?{title:x.title.trim(),text:x.text.trim()}:{})}))}});
     return true;
   };
   $('#nt-on').onclick=async()=>{const b=$('#nt-on');b.disabled=true;if(!await saveCfg()){b.disabled=false;return;}
@@ -1436,10 +1436,62 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setInterval(()=>{if(wakeWanted()&&document.visibilityState==='visible'&&!wakeActive())wakeOn();},30000);
 wakeOn();
 
+/* ================= RIEPILOGO SETTIMANALE (una volta sola) ================= */
+async function addWeekly(){
+  const n=(S.cfg&&S.cfg.notify)||null;if(!S.cfg||(n&&n.weeklyAdded))return;
+  const sl=clone(CapriDigest.slots(notifCfg()));
+  if(!sl.some(x=>x.kind==='settimana'))sl.push({id:'sw',h:9,kind:'settimana',days:[0]});
+  await put('config/main',{...S.cfg,notify:{...notifCfg(),slots:sl,weeklyAdded:true}});
+}
+
+/* ================= iPHONE: widget e Siri (Scriptable) ================= */
+const SITE_URL=()=>location.origin+location.pathname.replace(/index\.html$/,'');
+const SUPA_SQL=()=>{const m=String((getCfg()||{}).url||'').match(/https:\/\/([a-z0-9]+)\.supabase\.co/);return m?`https://supabase.com/dashboard/project/${m[1]}/sql/new`:'https://supabase.com/dashboard';};
+function apiToken(){const d=CACHE.apitoken&&CACHE.apitoken.get('main');return d&&d.token&&d.token.length>=32?d.token:'';}
+async function newToken(){const b=crypto.getRandomValues(new Uint8Array(24));const t='cap_'+b64u(b.buffer);await put('apitoken/main',{token:t,created:Date.now()});return t;}
+async function copyText(txt){
+  try{await navigator.clipboard.writeText(txt);return true;}catch(e){}
+  const ta=document.createElement('textarea');ta.value=txt;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.append(ta);ta.select();ta.setSelectionRange(0,txt.length);
+  let ok=false;try{ok=document.execCommand('copy');}catch(e){}ta.remove();return ok;
+}
+async function iphoneModal(){
+  let tok=apiToken();
+  if(!tok){try{tok=await newToken();}catch(e){toast('Non riesco a creare la chiave: '+errMsg(e),'err');return;}}
+  const C=getCfg()||{};const files={};
+  const fill=s=>s.split('__URL__').join(C.url||'').split('__KEY__').join(C.key||'').split('__TOKEN__').join(tok).split('__SITE__').join(SITE_URL());
+  const getF=async f=>{if(!files[f]){const r=await fetch('iphone/'+f,{cache:'no-store'});if(!r.ok)throw new Error('file '+f+' non trovato');files[f]=await r.text();}return f.endsWith('.sql')?files[f]:fill(files[f]);};
+  Promise.all(['capri_api.sql','capri-widget.js','capri-aggiungi.js'].map(f=>getF(f).catch(()=>{})));
+  const step=(n,t,body)=>`<div class="ip-step"><div class="ip-n">${n}</div><div><b>${t}</b>${body}</div></div>`;
+  openModal(`<div class="mh"><h2>Siri e widget iPhone</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <p class="mini" style="margin:0 0 14px">Con l'app gratuita Scriptable vedi ticket urgenti e spese sulla schermata Home o di blocco, e aggiungi cose a voce: “Ehi Siri, Capri” → “spesa 12,50 pizza”.</p>
+  <div class="ip">
+  ${step(1,'Attiva l\'ingresso per l\'iPhone (una volta sola)',`<p>Copia il codice, apri il <a href="${SUPA_SQL()}" target="_blank" rel="noopener">SQL Editor di Supabase</a>, incollalo e premi <b>Run</b>.</p>
+    <div class="ip-b"><button class="btn sm" type="button" data-cp="capri_api.sql">Copia codice SQL</button><button class="btn sm ghost" type="button" id="ip-check">Verifica collegamento</button></div><p class="mini" id="ip-res"></p>`)}
+  ${step(2,'Installa Scriptable e incolla i due script',`<p>Scarica <a href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Scriptable</a>. Per ogni script: tocca <b>+</b>, incolla, poi tocca il titolo in alto e chiamalo come indicato.</p>
+    <div class="ip-b"><button class="btn sm" type="button" data-cp="capri-widget.js">Copia script “Capri Widget”</button><button class="btn sm" type="button" data-cp="capri-aggiungi.js">Copia script “Capri Aggiungi”</button></div>`)}
+  ${step(3,'Aggiungi il widget',`<p><b>Home:</b> tieni premuto su uno spazio vuoto → <b>Modifica</b> → <b>Aggiungi widget</b> → Scriptable → scegli la misura → tocca il widget → Script: <b>Capri Widget</b>.<br><b>Schermata di blocco:</b> tienila premuta → <b>Personalizza</b> → Schermata di blocco → tocca l'area dei widget → Scriptable → poi scegli <b>Capri Widget</b> allo stesso modo.</p>`)}
+  ${step(4,'Crea il comando Siri',`<p>Apri <b>Comandi</b> → <b>+</b> → aggiungi l'azione <b>Detta testo</b>, poi l'azione di Scriptable <b>Run Script</b>: scegli <b>Capri Aggiungi</b> e come parametro (Parameter) il <b>Testo dettato</b>. Chiama il comando <b>Capri</b>.</p>
+    <p class="mini">Prova a dire: “spesa 12,50 pizza” · “ho speso 30 euro di benzina” · “ticket chiamare il commercialista domani urgente” · “nota comprare le batterie” · “diario il rebase si fa con git rebase -i”.</p>`)}
+  </div>
+  <div class="note-box" style="margin-top:14px">La chiave personale è già dentro gli script: non condividerli. Se la rigeneri, ricopia i due script su Scriptable.</div>
+  <div class="mf"><button class="btn danger ghost sm" id="ip-regen" type="button">Rigenera chiave</button><span class="sp"></span><button class="btn pri" type="button" data-close>Fatto</button></div>`,{wide:true});
+  DLG.querySelectorAll('[data-cp]').forEach(b=>b.onclick=async()=>{
+    const f=b.dataset.cp;let txt;try{txt=await getF(f);}catch(e){toast('Non riesco a leggere lo script: '+errMsg(e),'err');return;}
+    if(await copyText(txt)){toast('Copiato: ora incollalo','ok');b.classList.add('ok');}
+    else{toast('Copia non riuscita: scarico il file','err');saveBlob(f,new Blob([txt],{type:'text/plain'}));}
+  });
+  $('#ip-check').onclick=async()=>{const r=$('#ip-res');r.textContent='Verifico…';
+    try{const {data,error}=await SB.rpc('capri_api',{p_token:apiToken(),p_action:'riepilogo'});if(error)throw error;
+      r.innerHTML=`✅ Funziona: ${(data.tickets||[]).length} ticket aperti, ${(data.spese||[]).length} spese questo mese.`;}
+    catch(e){const m=errMsg(e);r.textContent=/capri_api|PGRST202|function|schema cache/i.test(m+(e&&e.code))?'Non ancora attivo: esegui prima il codice SQL su Supabase.':'Non funziona: '+m;}};
+  $('#ip-regen').onclick=async()=>{if(!confirm('La vecchia chiave smette di funzionare e dovrai ricopiare i due script. Continuare?'))return;
+    try{tok=await newToken();toast('Nuova chiave creata: ricopia i due script','ok');}catch(e){toast('Errore: '+errMsg(e),'err');}};
+}
+
 /* ================= MENU: backup, install, logout ================= */
 function backupData(){
   const out={app:'capri',version:1,exported:new Date().toISOString()};
-  for(const k in CACHE){if(/^push/.test(k))continue;out[k]=[...CACHE[k].entries()].map(([id,data])=>({id,data}));}
+  for(const k in CACHE){if(/^(push|apitoken)/.test(k))continue;out[k]=[...CACHE[k].entries()].map(([id,data])=>({id,data}));}
   return out;
 }
 $('#menu-btn').onclick=()=>{
@@ -1449,6 +1501,7 @@ $('#menu-btn').onclick=()=>{
   <div class="menu">
     <div style="display:flex;gap:8px"><input id="m-name" placeholder="Come ti chiamo?" value="${esc(cfg().name)}" maxlength="30" aria-label="Il tuo nome"><button class="btn" id="m-name-ok" type="button">Salva nome</button></div>
     <button class="btn" id="m-notif" type="button">${ico('bell')}Notifiche giornaliere</button>
+    <button class="btn" id="m-ios" type="button">${ico('play')}Siri e widget iPhone</button>
     <button class="btn" id="m-wake" type="button">${ico('logo')}<span>${'wakeLock' in navigator?(wakeWanted()?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)'):'Computer sempre sveglio: non supportato da questo browser'}</span></button>
     <button class="btn" id="m-exp" type="button">Scarica backup completo (file .json)</button>
     <label class="btn" style="cursor:pointer"><input type="file" accept=".json,application/json" hidden id="m-imp">Ripristina da un backup</label>
@@ -1458,6 +1511,7 @@ $('#menu-btn').onclick=()=>{
   </div>`);
   $('#m-name-ok').onclick=async()=>{const n=$('#m-name').value.trim();await put('config/main',{...cfg(),name:n});toast('Nome salvato','ok');renderOggi();};
   $('#m-notif').onclick=()=>{closeModal();notifModal();};
+  $('#m-ios').onclick=()=>{closeModal();iphoneModal();};
   $('#m-wake').onclick=async()=>{if(!('wakeLock' in navigator)){toast('Questo browser non lo supporta: usa Chrome, Edge o Safari aggiornati','err');return;}
     const on=!wakeWanted();try{localStorage.setItem('capri-wake',on?'1':'0');}catch(e){}if(on)await wakeOn();else await wakeOff();
     $('#m-wake span').textContent=on?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)';toast(on?(wakeActive()?'Il computer resterà sveglio finché Capri è aperto':'Attivo: parte appena Capri è in primo piano'):'Il computer può tornare in standby','ok');};
@@ -1526,6 +1580,7 @@ async function start(session){
   catch(e){setSync('Archivio non raggiungibile','err');showErr(e);S.loaded={t:1,w:1,s:1};S.ready=true;renderTickets();renderWish();renderOggi();renderNotes();renderDiary();if(S.view==='finanze')renderFin();return;}
   $('#errbar').hidden=true;
   S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();renderDiary();if(S.view==='finanze')renderFin();
+  addWeekly().catch(()=>{});
   try{SB.channel('docs-'+UID).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'user_id=eq.'+UID},onRealtime).subscribe();}catch(e){}
   let lastLoad=Date.now();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastLoad>20000&&!pendN&&!dirty.size&&!S.ed){lastLoad=Date.now();loadAll().catch(()=>{});}});

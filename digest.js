@@ -10,6 +10,7 @@
     ticket: 'Solo ticket urgenti',
     scadenze: 'Abbonamenti e scadenze',
     spese: 'Spese del giorno e del mese',
+    settimana: 'Riepilogo della settimana',
     custom: 'Un messaggio scritto da me'
   };
   function rome(now) {
@@ -92,6 +93,27 @@
           '\nQuesto mese: ' + eur(tot) + (bud ? ' su ' + eur(bud) + ' · ' + (tot > bud ? 'oltre di ' + eur(tot - bud) : 'restano ' + eur(bud - tot)) : ''),
         url: './#spese'
       };
+    } else if (kind === 'settimana') {
+      var dayStr = function (n) { var t = utc(today) + n * 864e5, x = new Date(t); return x.toISOString().slice(0, 10); };
+      var d7 = dayStr(-6), d14 = dayStr(-13), ms7 = now.getTime() - 7 * 864e5;
+      var tk = data.tickets || [];
+      var closed = tk.filter(function (t) { return t && t.status === 'fatto' && (+t.doneAt || 0) >= ms7; }).length;
+      var open = tk.filter(function (t) { return t && t.status !== 'fatto'; });
+      var lateW = open.filter(function (t) { return t.due && t.due < today; }).length;
+      var sumR = function (a, b) { return (data.spese || []).filter(function (x) { return x.d >= a && x.d <= b; }).reduce(function (s, x) { return s + (+x.amt || 0); }, 0); };
+      var w = sumR(d7, today), prev = sumR(d14, dayStr(-7));
+      var dn = (data.diary || []).filter(function (x) { return x && String(x.date || '') >= d7; }).length;
+      var next7 = dayStr(7);
+      var dueT = open.filter(function (t) { return t.due && t.due >= today && t.due <= next7; }).length;
+      var dueA = (data.abb || []).filter(function (x) { return x && x.active !== false && x.next && x.next >= today && x.next <= next7; }).length;
+      var pct = prev ? Math.round((w - prev) / prev * 100) : null;
+      var lines = [
+        '✅ ' + closed + ' ' + plural(closed, 'ticket chiuso', 'ticket chiusi') + ' · ' + open.length + ' ' + plural(open.length, 'aperto', 'aperti') + (lateW ? ' (' + lateW + ' ' + plural(lateW, 'scaduto', 'scaduti') + ')' : ''),
+        '💸 ' + eur(w) + ' spesi' + (pct !== null ? ' (' + (pct > 0 ? '+' : '') + pct + '% sulla settimana prima)' : ''),
+        '📒 ' + dn + ' ' + plural(dn, 'appunto', 'appunti') + ' nel Diary',
+        '📅 In arrivo: ' + dueT + ' ' + plural(dueT, 'ticket', 'ticket') + ' e ' + dueA + ' ' + plural(dueA, 'pagamento', 'pagamenti')
+      ];
+      p = { title: '📊 La tua settimana' + (cfg.name ? ', ' + cfg.name : ''), body: lines.join('\n'), url: './#oggi' };
     } else if (kind === 'custom') {
       if (slot.title || slot.text) p = { title: slot.title || 'Capri', body: slot.text || '', url: './#oggi' };
     }

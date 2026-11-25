@@ -15,12 +15,16 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
 - `sw.js`: service worker (notifiche push e apertura senza rete, rete prima).
 - `.github/workflows/notify.yml` + `.github/scripts/notify.mjs`: invio delle notifiche ogni ora
   (secret `SUPABASE_SECRET_KEY`). Su ogni push a quei file gira una prova automatica.
-- `setup.sql`: configurazione del database (tabella `docs`, permessi, archivio `allegati`).
+- `setup.sql`: configurazione del database (tabella `docs`, permessi, archivio `allegati`, funzione `capri_api`).
+- `iphone/`: script Scriptable per iPhone (`capri-widget.js`, `capri-aggiungi.js` per Siri) e `capri_api.sql`.
+  Gli script contengono i segnaposto `__URL__`, `__KEY__`, `__TOKEN__`, `__SITE__`: li riempie il sito
+  (menu ⋯ → Siri e widget iPhone) quando l'utente li copia. `capri_api` accetta solo il token salvato in `apitoken/main`.
 
 ## Dati
 Tabella unica `public.docs(user_id, coll, id, data jsonb)`, protetta da RLS.
 Collezioni: tickets, wishlist, sheets, config (doc `main`), spese, abbonamenti, note, diary,
-push, pushkeys (chiavi VAPID create dal telefono), pushstate.
+push, pushkeys (chiavi VAPID create dal telefono), pushstate, apitoken (chiave per widget e Siri).
+Notifiche: tipi riepilogo, ticket, scadenze, spese, settimana (riepilogo del lunedì), custom.
 
 ## Come pubblicare una modifica
 1. Modifica `src/…` (o `digest.js`, `sw.js`).

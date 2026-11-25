@@ -37,7 +37,7 @@ async function selftest() {
   }, new Date());
   if (!payload || !payload.title || !payload.body.includes('Rinnovo passaporto')) throw new Error('riepilogo non valido');
   const data = { tickets: [{ title: 'Bolletta', urg: 3, due: day(0), status: 'aperto' }], abb: [{ name: 'Palestra', amt: 30, next: day(1) }], spese: [{ d: rome(new Date()).today, amt: 12.5 }], cfg: { name: 'Nico', sbudget: 1000 } };
-  for (const kind of ['riepilogo', 'ticket', 'scadenze', 'spese', 'custom']) {
+  for (const kind of ['riepilogo', 'ticket', 'scadenze', 'spese', 'settimana', 'custom']) {
     const p = forSlot({ id: 'x', kind, title: 'Bevi acqua', text: '💧 Un bicchiere adesso' }, data, new Date());
     if (!p || !p.title) throw new Error('notifica ' + kind + ' non valida');
     console.log('[' + kind + '] ' + p.title + ' | ' + p.body.replace(/\n/g, ' / '));
@@ -64,7 +64,7 @@ async function loadRows() {
   if (MOCK) return JSON.parse(readFileSync(MOCK, 'utf8'));
   const rows = [];
   for (let off = 0; ; off += 1000) {
-    const page = await rest(`docs?select=user_id,coll,id,data&coll=in.(push,pushkeys,pushstate,tickets,abbonamenti,spese,config)&order=user_id,coll,id&limit=1000&offset=${off}`);
+    const page = await rest(`docs?select=user_id,coll,id,data&coll=in.(push,pushkeys,pushstate,tickets,abbonamenti,spese,diary,config)&order=user_id,coll,id&limit=1000&offset=${off}`);
     rows.push(...page); if (page.length < 1000) break;
   }
   return rows;
@@ -88,7 +88,7 @@ async function main() {
   const rows = await loadRows();
   const users = new Map();
   for (const r of rows) {
-    if (!users.has(r.user_id)) users.set(r.user_id, { push: [], tickets: [], abbonamenti: [], spese: [], config: {}, pushkeys: {}, pushstate: {} });
+    if (!users.has(r.user_id)) users.set(r.user_id, { push: [], tickets: [], abbonamenti: [], spese: [], diary: [], config: {}, pushkeys: {}, pushstate: {} });
     const u = users.get(r.user_id);
     if (Array.isArray(u[r.coll])) u[r.coll].push({ ...(r.data || {}), _id: r.id }); else if (u[r.coll]) u[r.coll][r.id] = r.data || {};
   }
@@ -114,7 +114,7 @@ async function main() {
       due.forEach((sl) => { sentMap[sl.id] = today; });
       if (!due.length) continue;
     }
-    const data = { tickets: u.tickets, abb: u.abbonamenti, spese: u.spese, cfg: { name: conf.name, scats: conf.scats, sbudget: conf.sbudget } };
+    const data = { tickets: u.tickets, abb: u.abbonamenti, spese: u.spese, diary: u.diary, cfg: { name: conf.name, scats: conf.scats, sbudget: conf.sbudget } };
     let ok = 0;
     for (const sl of toSend) {
       const payload = forSlot(sl, data, now);
