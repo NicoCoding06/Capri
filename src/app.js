@@ -1453,6 +1453,276 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setInterval(()=>{if(wakeWanted()&&document.visibilityState==='visible'&&!wakeActive())wakeOn();},30000);
 wakeOn();
 
+/* ================= MUSICA: player per i brani del PC ================= */
+/* SHA-256 e HMAC sincroni: le firme si calcolano subito, così su iPhone il tocco avvia l'audio senza attese */
+const SHA_K=new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+function sha256(bytes){
+  const l=bytes.length,n=((l+9+63)>>6)<<6,m=new Uint8Array(n);m.set(bytes);m[l]=0x80;const dv=new DataView(m.buffer);dv.setUint32(n-4,l*8>>>0);dv.setUint32(n-8,Math.floor(l/0x20000000));
+  const H=new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]),W=new Uint32Array(64),r=(x,k)=>(x>>>k)|(x<<(32-k));
+  for(let o=0;o<n;o+=64){for(let i=0;i<16;i++)W[i]=dv.getUint32(o+i*4);
+    for(let i=16;i<64;i++){const a=W[i-15],b=W[i-2];W[i]=(W[i-16]+(r(a,7)^r(a,18)^(a>>>3))+W[i-7]+(r(b,17)^r(b,19)^(b>>>10)))>>>0;}
+    let [a,b,c,d,e,f,g,h]=H;
+    for(let i=0;i<64;i++){const t1=(h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+SHA_K[i]+W[i])>>>0,t2=((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&c)^(b&c)))>>>0;h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;}
+    H[0]+=a;H[1]+=b;H[2]+=c;H[3]+=d;H[4]+=e;H[5]+=f;H[6]+=g;H[7]+=h;}
+  const out=new Uint8Array(32),ov=new DataView(out.buffer);H.forEach((v,i)=>ov.setUint32(i*4,v));return out;
+}
+function hmac256(key,msg){const enc=new TextEncoder();let k=enc.encode(key);if(k.length>64)k=sha256(k);const kb=new Uint8Array(64);kb.set(k);
+  const ip=kb.map(x=>x^0x36),op=kb.map(x=>x^0x5c),m=enc.encode(msg),a=new Uint8Array(64+m.length);a.set(ip);a.set(m,64);const ih=sha256(a),b=new Uint8Array(96);b.set(op);b.set(ih,64);return sha256(b);}
+
+const MU={tab:'brani',q:'',sel:null,lib:[],by:{},libAt:0,libHost:'',limit:200,queue:[],orig:[],qi:-1,shuffle:false,repeat:'off',from:'',errs:0,sigs:new Map(),lists:{},reach:null,err:'',seeking:false,stKey:''};
+const AU=new Audio();AU.preload='metadata';
+let MACT=[];
+const muDoc=id=>(CACHE.music&&CACHE.music.get(id))||null;
+const muHost=()=>muDoc('host');
+const muKey=()=>{const d=muDoc('key');return d&&d.key&&d.key.length>=32?d.key:'';};
+const muOnline=()=>{const h=muHost();return !!(h&&h.url&&Date.now()-(+h.at||0)<150000)&&MU.reach!==false;};
+const muLikes=()=>new Set((muDoc('likes')||{}).ids||[]);
+const muPls=()=>[...((CACHE.playlists||new Map()).entries())].map(([id,d])=>({...d,id})).sort((a,b)=>(a.created||0)-(b.created||0));
+const fmtDur=s=>{s=Math.max(0,Math.round(+s||0));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=String(s%60).padStart(2,'0');return h?`${h}:${String(m).padStart(2,'0')}:${x}`:`${m}:${x}`;};
+const norm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function muSig(what){const k=muKey();if(!k)return'';const e=Math.ceil(Date.now()/1000/21600)*21600+21600,ck=what+'.'+e;
+  let q=MU.sigs.get(ck);if(!q){q=`e=${e}&s=${b64u(hmac256(k,ck).buffer).slice(0,32)}`;if(MU.sigs.size>4000)MU.sigs.clear();MU.sigs.set(ck,q);}return q;}
+function muUrl(kind,id){const h=muHost();if(!h||!h.url)return'';const q=muSig(id?kind+'.'+id:kind);return q?`${h.url}/${id?kind+'/'+id:kind}?${q}`:'';}
+function muSetLib(j){MU.lib=Array.isArray(j.tracks)?j.tracks:[];MU.libAt=j.at||0;MU.by={};const ac={};
+  const ak=t=>(t.al||'')+'\u0001'+(t.aa||t.a||'').toLowerCase();
+  for(const t of MU.lib){MU.by[t.i]=t;if(t.pic&&t.al&&!ac[ak(t)])ac[ak(t)]=t.i;}
+  for(const t of MU.lib)t.cv=t.pic?t.i:(t.al&&ac[ak(t)])||'';}
+try{const c=JSON.parse(localStorage.getItem('capri-mlib')||'null');if(c&&c.tracks){muSetLib(c);MU.libHost=c.host||'';}}catch(e){}
+async function muLoadLib(force){
+  const h=muHost();if(!h||!h.url||Date.now()-(+h.at||0)>150000){if(S.view==='musica')renderMusic();return;}
+  if(!force&&MU.libHost===h.url&&MU.libAt&&h.info&&h.info.lib===MU.libAt&&MU.reach)return;
+  if(MU.loading)return;MU.loading=true;
+  try{const r=await fetch(muUrl('library'),{cache:'no-store'});if(!r.ok)throw new Error(r.status===403?'la chiave non coincide: riscarica il programma sul PC':'il PC ha risposto '+r.status);
+    const j=await r.json();muSetLib(j);MU.libHost=h.url;MU.reach=true;MU.err='';try{localStorage.setItem('capri-mlib',JSON.stringify({...j,host:h.url}));}catch(e){}}
+  catch(e){MU.reach=false;MU.err=/fetch|network|load/i.test(errMsg(e))?'il PC non risponde':errMsg(e);}
+  MU.loading=false;if(S.view==='musica')renderMusic();mUI();
+}
+SUBS.music=()=>{const h=muHost(),st=[muOnline(),h&&h.url,h&&h.info&&h.info.lib,muKey(),[...muLikes()].join()].join('|');
+  if(st===MU.stKey){muStatus();return;}const hostChanged=!MU.stKey||MU.stKey.split('|')[1]!==String(h&&h.url);MU.stKey=st;
+  if(hostChanged)MU.reach=null;muLoadLib();if(S.view==='musica')renderMusic();mUI();};
+SUBS.playlists=()=>{if(S.view==='musica')renderMusic();};
+
+/* ---------- copertine (caricate solo quando si vedono) ---------- */
+const muIO='IntersectionObserver' in window?new IntersectionObserver(es=>{for(const e of es){if(!e.isIntersecting)continue;muIO.unobserve(e.target);muFillCover(e.target);}},{rootMargin:'300px'}):null;
+function muFillCover(el){const id=el.dataset.cv;if(!id||el.dataset.cvd)return;el.dataset.cvd=1;const u=muUrl('c',id);if(!u)return;
+  const im=new Image();im.decoding='async';im.alt='';im.onload=()=>{el.textContent='';el.append(im);};im.onerror=()=>{};im.src=u;}
+function muCovers(root){root.querySelectorAll('[data-cv]:not([data-cvd])').forEach(el=>muIO?muIO.observe(el):muFillCover(el));}
+const cvId=list=>{const t=list.find(x=>x.cv);return t?t.cv:'';};
+const mcv=(id,cls='')=>`<span class="mcv ${cls}"${id?` data-cv="${id}"`:''}>${ico('music')}</span>`;
+
+/* ---------- raggruppamenti ---------- */
+function muAlbums(list){const m=new Map();for(const t of list){const art=t.aa||t.a||'';const k=(t.al||'(senza album)')+'\u0001'+art.toLowerCase();if(!m.has(k))m.set(k,{k,al:t.al||'Senza album',a:art,tr:[]});m.get(k).tr.push(t);}
+  const out=[...m.values()];for(const a of out){a.tr.sort((x,y)=>(x.dn||0)-(y.dn||0)||(x.n||0)-(y.n||0)||x.t.localeCompare(y.t));a.y=(a.tr.find(t=>t.y)||{}).y||'';a.cv=cvId(a.tr);}
+  return out.sort((x,y)=>x.a.localeCompare(y.a,'it')||x.al.localeCompare(y.al,'it'));}
+function muArtists(list){const m=new Map();for(const t of list){const a=t.a||'Artista sconosciuto';if(!m.has(a))m.set(a,{a,tr:[]});m.get(a).tr.push(t);}
+  return [...m.values()].map(x=>({...x,cv:cvId(x.tr)})).sort((x,y)=>x.a.localeCompare(y.a,'it'));}
+function muFilter(list){const q=norm(MU.q).trim();if(!q)return list;const w=q.split(/\s+/);return list.filter(t=>{const h=norm(t.t+' '+t.a+' '+t.al+' '+(t.aa||''));return w.every(x=>h.includes(x));});}
+
+/* ---------- vista ---------- */
+function muStatus(){
+  const h=muHost(),on=muOnline(),n=MU.lib.length,key=muKey();
+  const sum=$('#mu-sum'),acts=$('#mu-acts');if(!sum)return;
+  if(!key||!h){sum.innerHTML='Ascolta qui, anche dal telefono, le canzoni che hai sul PC.';
+    acts.innerHTML=`<button class="btn pri" data-ma="${MACT.push(muSetupModal)-1}">${ico('plus')}Collega il PC</button>`;return;}
+  if(on){sum.innerHTML=`<span class="mu-st on"><i></i>${esc((h.info&&h.info.name)||'PC')} acceso</span> · ${n.toLocaleString('it-IT')} ${plural(n,'brano','brani')}${MU.loading?' · aggiorno…':''}`;}
+  else sum.innerHTML=`<span class="mu-st"><i></i>PC spento o non raggiungibile</span>${h.at?' · ultimo segnale '+esc(ago(+h.at)):''}${MU.err&&h.url?' · '+esc(MU.err):''}${n?` · vedi la libreria, ma per ascoltare serve il PC acceso`:''}`;
+  acts.innerHTML=`<div class="mu-acts">${on&&n?`<button class="btn pri" data-ma="${MACT.push(()=>mPlayList(muFilter(MU.lib).map(t=>t.i),0,'Tutti i brani'))-1}"><svg><use href="#i-mplay"/></svg>Riproduci</button><button class="btn" data-ma="${MACT.push(()=>{MU.shuffle=true;const ids=muFilter(MU.lib).map(t=>t.i);mPlayList(ids,Math.floor(Math.random()*ids.length),'Tutti i brani');})-1}"><svg><use href="#i-shuffle"/></svg>Casuale</button>`:`<button class="btn" data-ma="${MACT.push(()=>{MU.reach=null;muLoadLib(true);})-1}">${ico('refresh')}Riprova</button>`}
+    <button class="btn ghost" data-ma="${MACT.push(muSetupModal)-1}" aria-label="Impostazioni del collegamento">${ico('menu')}</button></div>`;
+}
+function renderMusic(){
+  if(!S.ready)return;MACT=[];MU.lists={};muStatus();
+  $$('#mu-tabs [data-mt]').forEach(b=>b.classList.toggle('on',b.dataset.mt===MU.tab));
+  const body=$('#mu-body'),L=muLikes(),on=muOnline(),A=fn=>MACT.push(fn)-1;
+  if(!MU.lib.length&&MU.tab!=='playlist'){
+    body.innerHTML=!muKey()||!muHost()?`<div class="mu-empty"><b>Collega il tuo PC</b>Un piccolo programma sul PC legge la cartella Musica e la fa ascoltare qui, anche fuori casa. Funziona quando il PC è acceso.<br><br><button class="btn pri" data-ma="${A(muSetupModal)}">Collega il PC</button></div>`
+      :on?`<div class="mu-empty"><b>${MU.loading?'Carico la libreria…':'Nessun brano trovato'}</b>${MU.loading?'':'Controlla la cartella scelta sul PC (mp3, m4a, flac, ogg, wav).'}</div>`
+      :`<div class="mu-empty"><b>Il PC è spento</b>Accendilo (o apri Capri Musica) e la libreria comparirà qui entro un minuto.</div>`;
+    return;}
+  const rows=(list,ctx,numbered)=>{MU.lists[ctx]=list.map(t=>t.i);const cur=MU.queue[MU.qi];const shown=list.slice(0,MU.limit);
+    return `<div class="mu-list">${shown.map((t,i)=>`<div class="mr${t.i===cur?' cur':''}${on?'':' off'}" data-mr="${i}" data-ctx="${ctx}"><span class="mn">${t.i===cur&&!AU.paused?'♪':numbered&&t.n?t.n:i+1}</span>${mcv(t.cv)}<span class="mt"><b>${esc(t.t)}</b><span>${esc(t.a)}</span></span><span class="mal">${esc(t.al)}</span><span class="md2">${t.d?fmtDur(t.d):''}</span><button class="mi${L.has(t.i)?' liked':''}" data-like="${t.i}" aria-label="Mi piace"><svg><use href="#i-heart"/></svg></button><button class="mi" data-more="${t.i}" aria-label="Altro">⋯</button></div>`).join('')}</div>
+      ${list.length>shown.length?`<button class="btn ghost mu-more" data-ma="${A(()=>{MU.limit+=400;renderMusic();})}">Mostra altri ${Math.min(400,list.length-shown.length)} (${list.length-shown.length} in tutto)</button>`:''}`;};
+  const head=(cv,kick,title,sub,ids,from,extra='')=>`<button class="btn ghost sm mu-back" data-ma="${A(()=>{MU.sel=null;MU.limit=200;renderMusic();scrollTo(0,0);})}">‹ Indietro</button>
+    <div class="mu-head">${mcv(cv)}<div><p class="mini">${esc(kick)}</p><h2>${esc(title)}</h2><p>${sub}</p><div class="mu-acts">${on&&ids.length?`<button class="btn pri" data-ma="${A(()=>{MU.shuffle=false;mPlayList(ids,0,from);})}"><svg><use href="#i-mplay"/></svg>Riproduci</button><button class="btn" data-ma="${A(()=>{MU.shuffle=true;mPlayList(ids,Math.floor(Math.random()*ids.length),from);})}"><svg><use href="#i-shuffle"/></svg>Casuale</button>`:''}${extra}</div></div></div>`;
+  const tot=list=>{const s=list.reduce((a,t)=>a+(+t.d||0),0);return `${list.length} ${plural(list.length,'brano','brani')}${s?' · '+(s>=3600?Math.floor(s/3600)+' h '+Math.round(s%3600/60)+' min':Math.round(s/60)+' min'):''}`;};
+  let html='';const sel=MU.sel;
+  if(sel&&sel.k==='album'){const a=muAlbums(MU.lib).find(x=>x.k===sel.id);if(!a){MU.sel=null;return renderMusic();}
+    html=head(a.cv,'Album',a.al,`${esc(a.a)}${a.y?' · '+esc(a.y):''} · ${tot(a.tr)}`,a.tr.map(t=>t.i),a.al)+rows(a.tr,'sel',true);}
+  else if(sel&&sel.k==='artist'){const ar=muArtists(MU.lib).find(x=>x.a===sel.id);if(!ar){MU.sel=null;return renderMusic();}
+    const als=muAlbums(ar.tr);
+    html=head(ar.cv,'Artista',ar.a,`${tot(ar.tr)} · ${als.length} ${plural(als.length,'album','album')}`,ar.tr.map(t=>t.i),ar.a)+(als.length>1?`<div class="mu-grid" style="margin-bottom:18px">${als.map(a=>albumCard(a,A)).join('')}</div>`:'')+rows(ar.tr,'sel');}
+  else if(sel&&sel.k==='pl'){const pl=sel.id==='likes'?{id:'likes',name:'Mi piace',ids:[...L].reverse()}:sel.id==='recent'?{id:'recent',name:'Ascoltati di recente',ids:mRecent()}:muPls().find(x=>x.id===sel.id);
+    if(!pl){MU.sel=null;return renderMusic();}const tr=(pl.ids||[]).map(i=>MU.by[i]).filter(Boolean);
+    const extra=pl.id!=='likes'&&pl.id!=='recent'?`<button class="btn ghost" data-ma="${A(()=>plRename(pl))}">Rinomina</button><button class="btn ghost danger" data-ma="${A(()=>plDelete(pl))}">Elimina</button>`:'';
+    html=head(tr.length?cvId(tr):'',pl.id==='likes'?'Raccolta':'Playlist',pl.name,tot(tr)+((pl.ids||[]).length>tr.length?` · ${(pl.ids||[]).length-tr.length} non più sul PC`:''),tr.map(t=>t.i),pl.name,extra)+(tr.length?rows(tr,'sel'):'<div class="mu-empty">Ancora vuota: tocca ⋯ su un brano per aggiungerlo.</div>');}
+  else if(MU.tab==='brani'){const list=muFilter(MU.lib);html=list.length?rows(list,'all'):`<div class="mu-empty">Nessun brano per “${esc(MU.q)}”.</div>`;}
+  else if(MU.tab==='album'){const als=muAlbums(muFilter(MU.lib));html=als.length?`<div class="mu-grid">${als.slice(0,MU.limit).map(a=>albumCard(a,A)).join('')}</div>${als.length>MU.limit?`<button class="btn ghost mu-more" data-ma="${A(()=>{MU.limit+=400;renderMusic();})}">Mostra altri</button>`:''}`:'<div class="mu-empty">Nessun album.</div>';}
+  else if(MU.tab==='artisti'){const ars=muArtists(muFilter(MU.lib));html=`<div class="mu-list mu-art">${ars.slice(0,MU.limit).map(x=>`<button data-ma="${A(()=>{MU.sel={k:'artist',id:x.a};MU.limit=200;renderMusic();scrollTo(0,0);})}">${mcv(x.cv)}<b>${esc(x.a)}</b><span>${x.tr.length} ${plural(x.tr.length,'brano','brani')}</span></button>`).join('')}</div>`;}
+  else{const pls=muPls(),rec=mRecent();
+    html=`<div class="mu-grid">${[{id:'likes',name:'Mi piace',ids:[...L]},...(rec.length?[{id:'recent',name:'Ascoltati di recente',ids:rec}]:[]),...pls].map(pl=>{const tr=(pl.ids||[]).map(i=>MU.by[i]).filter(Boolean);
+      return `<button class="mu-card" data-ma="${A(()=>{MU.sel={k:'pl',id:pl.id};MU.limit=200;renderMusic();scrollTo(0,0);})}">${pl.id==='likes'?`<span class="mcv" style="background:linear-gradient(135deg,var(--cpp),#5b1bff);color:#fff">${ico('heart')}</span>`:mcv(cvId(tr))}<b>${esc(pl.name)}</b><span>${tr.length} ${plural(tr.length,'brano','brani')}</span></button>`;}).join('')}
+      <button class="mu-card" data-ma="${A(()=>plNew())}"><span class="mcv" style="background:var(--p2)">${ico('plus')}</span><b>Nuova playlist</b><span>Crea una raccolta</span></button></div>`;}
+  body.innerHTML=html;muCovers(body);
+}
+function albumCard(a,A){const ids=a.tr.map(t=>t.i);return `<div class="mu-card" role="button" tabindex="0" data-ma="${A(()=>{MU.sel={k:'album',id:a.k};MU.limit=200;renderMusic();scrollTo(0,0);})}">${mcv(a.cv)}<b>${esc(a.al)}</b><span>${esc(a.a)}${a.y?' · '+esc(a.y):''}</span>${muOnline()?`<button class="mu-fab" type="button" aria-label="Riproduci ${esc(a.al)}" data-ma="${A(()=>{MU.shuffle=false;mPlayList(ids,0,a.al);})}"><svg><use href="#i-mplay"/></svg></button>`:''}</div>`;}
+
+/* ---------- playlist e mi piace ---------- */
+async function muLike(id){const L=muLikes();if(L.has(id))L.delete(id);else L.add(id);await put('music/likes',{ids:[...L]});mUI();}
+function plNew(addId){
+  openModal(`<div class="mh"><h2>Nuova playlist</h2><button class="x" data-close aria-label="Chiudi">×</button></div><form class="form" id="plf"><label class="f full"><span>Nome</span><input name="n" maxlength="60" required autofocus placeholder="Es. Per correre"></label></form>
+  <div class="mf"><span class="sp"></span><button class="btn ghost" data-close type="button">Annulla</button><button class="btn pri" id="pl-ok" type="button">Crea</button></div>`);
+  const go=async()=>{const n=$('#plf [name=n]').value.trim();if(!n)return;const id=uid();closeModal();await put('playlists/'+id,{name:n,ids:addId?[addId]:[],created:Date.now(),upd:Date.now()});toast(addId?`Aggiunto a “${n}”`:'Playlist creata','ok');};
+  $('#pl-ok').onclick=go;$('#plf').onsubmit=e=>{e.preventDefault();go();};
+}
+function plRename(pl){const n=prompt('Nuovo nome',pl.name);if(n&&n.trim())put('playlists/'+pl.id,{...body(pl),name:n.trim(),upd:Date.now()});}
+async function plDelete(pl){if(!confirm(`Eliminare la playlist “${pl.name}”? I brani restano sul PC.`))return;MU.sel=null;await drop('playlists/'+pl.id);toast('Playlist eliminata','ok');}
+async function plAdd(pl,id){const ids=(pl.ids||[]).filter(x=>x!==id).concat(id);await put('playlists/'+pl.id,{...body(pl),ids,upd:Date.now()});toast(`Aggiunto a “${pl.name}”`,'ok');}
+async function plRemove(pl,id){await put('playlists/'+pl.id,{...body(pl),ids:(pl.ids||[]).filter(x=>x!==id),upd:Date.now()});}
+function muMore(id){const t=MU.by[id];if(!t)return;const sel=MU.sel,pl=sel&&sel.k==='pl'&&sel.id!=='likes'&&sel.id!=='recent'?muPls().find(x=>x.id===sel.id):null;
+  openModal(`<div class="mh"><h2 style="font-size:18px">${esc(t.t)}</h2><button class="x" data-close aria-label="Chiudi">×</button></div><p class="mini" style="margin:-8px 0 14px">${esc(t.a)}${t.al?' · '+esc(t.al):''}</p>
+  <div class="mu-menu"><button data-m="next">${ico('mnext')}Riproduci dopo questo</button><button data-m="queue">${ico('queue')}Aggiungi in coda</button>
+  ${muPls().map(p=>`<button data-pl="${esc(p.id)}">${ico('plus')}Aggiungi a “${esc(p.name)}”</button>`).join('')}<button data-m="newpl">${ico('plus')}Nuova playlist con questo brano</button>
+  ${pl?`<button data-m="rmpl">${ico('queue')}Togli da “${esc(pl.name)}”</button>`:''}${t.al?`<button data-m="album">${ico('music')}Vai all'album</button>`:''}<button data-m="artist">${ico('music')}Vai all'artista</button></div>`);
+  DLG.querySelector('.mu-menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const m=b.dataset.m;closeModal();
+    if(b.dataset.pl){const p=muPls().find(x=>x.id===b.dataset.pl);if(p)plAdd(p,id);}
+    else if(m==='next'||m==='queue'){if(MU.qi<0){mPlayList([id],0,'');return;}const at=m==='next'?MU.qi+1:MU.queue.length;MU.queue.splice(at,0,id);MU.orig.push(id);mSave();mUI();toast(m==='next'?'Suonerà dopo questo':'Aggiunto in coda','ok');}
+    else if(m==='newpl')plNew(id);else if(m==='rmpl')plRemove(pl,id);
+    else if(m==='album'){MU.sel={k:'album',id:(t.al||'(senza album)')+'\u0001'+(t.aa||t.a||'').toLowerCase()};MU.limit=200;location.hash='#musica';renderMusic();scrollTo(0,0);mClose();}
+    else if(m==='artist'){MU.sel={k:'artist',id:t.a||'Artista sconosciuto'};MU.limit=200;location.hash='#musica';renderMusic();scrollTo(0,0);mClose();}});
+}
+const mRecent=()=>{try{return JSON.parse(localStorage.getItem('capri-mrecent')||'[]');}catch(e){return[];}};
+function mPushRecent(id){try{const r=mRecent().filter(x=>x!==id);r.unshift(id);localStorage.setItem('capri-mrecent',JSON.stringify(r.slice(0,50)));}catch(e){}}
+
+/* ---------- riproduzione ---------- */
+function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function mPlayList(ids,start,from){
+  if(!ids.length)return;if(!muOnline()){toast('Il PC non è raggiungibile: accendilo o apri Capri Musica','err');return;}
+  MU.orig=ids.slice();MU.from=from||'';start=Math.max(0,Math.min(start||0,ids.length-1));
+  if(MU.shuffle){const first=ids[start],rest=shuffleArr(ids.filter((_,j)=>j!==start));MU.queue=[first,...rest];MU.qi=0;}else{MU.queue=ids.slice();MU.qi=start;}
+  MU.errs=0;mLoad(true);
+}
+function mLoad(play,pos){
+  const id=MU.queue[MU.qi],t=MU.by[id];if(!t){mUI();return;}
+  const u=muUrl('a',id);if(!u){toast('Il PC non è collegato','err');return;}
+  AU.src=u;if(pos)AU.addEventListener('loadedmetadata',()=>{try{AU.currentTime=pos;}catch(e){}},{once:true});
+  if(play){const p=AU.play();if(p&&p.catch)p.catch(e=>{if(e&&e.name==='NotAllowedError')toast('Tocca ▶ per avviare','ok');});}
+  mPushRecent(id);mSession(t);mUI();mSave();
+}
+function mToggle(){if(MU.qi<0||!MU.queue.length){const ids=muFilter(MU.lib).map(t=>t.i);if(ids.length)mPlayList(ids,0,'Tutti i brani');return;}
+  if(!AU.src||AU.error){mLoad(true,MU.restorePos||0);MU.restorePos=0;return;}if(AU.paused){const p=AU.play();if(p&&p.catch)p.catch(()=>{});}else AU.pause();}
+function mNext(auto){if(!MU.queue.length)return;
+  if(auto&&MU.repeat==='one'){AU.currentTime=0;AU.play().catch(()=>{});return;}
+  if(MU.qi<MU.queue.length-1)MU.qi++;else if(MU.repeat==='all'||!auto)MU.qi=0;else{AU.pause();AU.currentTime=0;mUI();return;}
+  mLoad(true);}
+function mPrev(){if(AU.currentTime>3){AU.currentTime=0;return;}if(MU.qi>0)MU.qi--;else if(MU.repeat==='all')MU.qi=MU.queue.length-1;mLoad(true);}
+function mShuffle(){MU.shuffle=!MU.shuffle;const cur=MU.queue[MU.qi];
+  if(MU.queue.length){if(MU.shuffle){const rest=shuffleArr(MU.queue.filter((x,j)=>j!==MU.qi));MU.queue=[cur,...rest];MU.qi=0;}else{MU.queue=MU.orig.slice();MU.qi=Math.max(0,MU.queue.indexOf(cur));}}
+  mSave();mUI();toast(MU.shuffle?'Casuale attivo':'Casuale spento','ok');}
+function mRepeat(){MU.repeat=MU.repeat==='off'?'all':MU.repeat==='all'?'one':'off';mSave();mUI();toast(MU.repeat==='off'?'Ripetizione spenta':MU.repeat==='all'?'Ripeti la coda':'Ripeti il brano','ok');}
+function mSave(){try{localStorage.setItem('capri-mstate',JSON.stringify({queue:MU.queue.slice(0,2000),orig:MU.orig.slice(0,2000),qi:MU.qi,pos:Math.floor(AU.currentTime||0),shuffle:MU.shuffle,repeat:MU.repeat,from:MU.from,vol:AU.volume}));}catch(e){}}
+try{const st=JSON.parse(localStorage.getItem('capri-mstate')||'null');if(st&&Array.isArray(st.queue)){Object.assign(MU,{queue:st.queue,orig:st.orig||st.queue,qi:st.qi??-1,shuffle:!!st.shuffle,repeat:st.repeat||'off',from:st.from||''});MU.restorePos=st.pos||0;if(st.vol!=null)AU.volume=st.vol;}}catch(e){}
+function mSession(t){if(!('mediaSession' in navigator))return;try{const cu=t.cv?muUrl('c',t.cv):'';
+  navigator.mediaSession.metadata=new MediaMetadata({title:t.t,artist:t.a,album:t.al||'',artwork:cu?[{src:cu,sizes:'512x512',type:'image/jpeg'}]:[{src:'icon-512.png',sizes:'512x512',type:'image/png'}]});}catch(e){}}
+if('mediaSession' in navigator){const ms=navigator.mediaSession,set=(a,f)=>{try{ms.setActionHandler(a,f);}catch(e){}};
+  set('play',()=>mToggle());set('pause',()=>AU.pause());set('nexttrack',()=>mNext());set('previoustrack',()=>mPrev());
+  set('seekto',d=>{if(d.seekTime!=null)AU.currentTime=d.seekTime;});set('seekbackward',d=>{AU.currentTime=Math.max(0,AU.currentTime-(d.seekOffset||10));});set('seekforward',d=>{AU.currentTime=Math.min(AU.duration||0,AU.currentTime+(d.seekOffset||10));});}
+const icoUse=(el,name)=>{const u=el&&el.querySelector('use');if(u)u.setAttribute('href','#'+name);};
+function mUI(){
+  const id=MU.queue[MU.qi],t=MU.by[id],mp=$('#mp');const show=!!t;mp.hidden=!show;document.body.classList.toggle('has-mp',show);if(!t)return;
+  const L=muLikes(),playing=!AU.paused&&!AU.ended;
+  if(mp.dataset.id!==id){mp.dataset.id=id;
+    for(const [c,tt,a] of [['#mp-cv','#mp-t','#mp-a'],['#mpf-cv','#mpf-t','#mpf-a']]){$(tt).textContent=t.t;$(a).textContent=t.a+(t.al?' · '+t.al:'');const cv=$(c);cv.innerHTML=ico('music');delete cv.dataset.cvd;if(t.cv){cv.dataset.cv=t.cv;muFillCover(cv);}else delete cv.dataset.cv;}
+    const bg=$('#mpf-bg');bg.style.backgroundImage=t.cv?`url("${muUrl('c',t.cv)}")`:'none';
+    document.title=`${t.t} · ${t.a} — Capri`;}
+  for(const b of ['#mp-play','#mpf-play']){icoUse($(b),playing?'i-mpause':'i-mplay');$(b).setAttribute('aria-label',playing?'Pausa':'Riproduci');}
+  for(const b of ['#mp-like','#mpf-like'])$(b).classList.toggle('liked',L.has(id));
+  for(const b of ['#mp-shuf','#mpf-shuf'])$(b).classList.toggle('on',MU.shuffle);
+  for(const b of ['#mp-rep','#mpf-rep']){$(b).classList.toggle('on',MU.repeat!=='off');$(b).classList.toggle('one',MU.repeat==='one');}
+  $('#mpf-from').textContent=MU.from?`Da: ${MU.from}`:'In riproduzione';
+  if('mediaSession' in navigator)try{navigator.mediaSession.playbackState=playing?'playing':'paused';}catch(e){}
+  if(!$('#mpf-q').hidden)mQueue();
+  $$('#mu-body .mr').forEach(r=>{const ctx=MU.lists[r.dataset.ctx];const rid=ctx&&ctx[+r.dataset.mr];r.classList.toggle('cur',rid===id);});
+}
+function mTime(){
+  if(MU.seeking)return;const d=AU.duration||(MU.by[MU.queue[MU.qi]]||{}).d||0,c=AU.currentTime||0,p=d?Math.min(100,c/d*100):0;
+  for(const [r,cu,du] of [['#mp-range','#mp-cur','#mp-dur'],['#mpf-range','#mpf-cur','#mpf-dur']]){const el=$(r);el.value=Math.round(p*10);el.style.setProperty('--p',p+'%');$(cu).textContent=fmtDur(c);$(du).textContent=fmtDur(d);}
+  $('#mp-prog i').style.width=p+'%';
+  if('mediaSession' in navigator&&d&&isFinite(d))try{navigator.mediaSession.setPositionState({duration:d,position:Math.min(c,d),playbackRate:AU.playbackRate||1});}catch(e){}
+}
+AU.addEventListener('timeupdate',()=>{mTime();if(Math.floor(AU.currentTime)%10===0)mSave();});
+AU.addEventListener('play',mUI);AU.addEventListener('pause',()=>{mUI();mSave();});AU.addEventListener('loadedmetadata',mTime);
+AU.addEventListener('playing',()=>{MU.errs=0;});
+AU.addEventListener('ended',()=>mNext(true));
+AU.addEventListener('error',()=>{if(!AU.src||AU.src===location.href)return;MU.errs++;
+  if(!muOnline()||MU.errs>=3){toast('Non riesco a riprodurre: il PC è acceso e collegato?','err');MU.reach=false;muStatus();mUI();return;}
+  toast('Brano non riproducibile, passo al successivo','err');setTimeout(()=>mNext(true),900);});
+function mQueue(){const el=$('#mpf-q'),L=muLikes();const up=MU.queue.slice(MU.qi+1,MU.qi+101);
+  el.innerHTML=`<h3>In riproduzione</h3>${qRow(MU.queue[MU.qi],MU.qi,true)}<h3>Prossimi${MU.from?' · '+esc(MU.from):''}</h3>${up.length?up.map((id,j)=>qRow(id,MU.qi+1+j)).join(''):'<p class="mini" style="padding:0 6px">Fine della coda.</p>'}`;
+  muCovers(el);
+  function qRow(id,i,cur){const t=MU.by[id];if(!t)return'';return `<div class="mr${cur?' cur':''}" data-qi="${i}">${mcv(t.cv)}<span class="mt"><b>${esc(t.t)}</b><span>${esc(t.a)}</span></span>${cur?'':`<button class="mi" data-qrm="${i}" aria-label="Togli dalla coda">×</button>`}</div>`;}}
+function mOpen(){const f=$('#mpf');f.hidden=false;document.body.style.overflow='hidden';mUI();mTime();}
+function mClose(){$('#mpf').hidden=true;document.body.style.overflow='';}
+
+/* ---------- eventi ---------- */
+$('#v-musica').addEventListener('click',e=>{
+  const lk=e.target.closest('[data-like]');if(lk){e.stopPropagation();muLike(lk.dataset.like);return;}
+  const mo=e.target.closest('[data-more]');if(mo){e.stopPropagation();muMore(mo.dataset.more);return;}
+  const a=e.target.closest('[data-ma]');if(a){e.stopPropagation();const f=MACT[+a.dataset.ma];if(f)f();return;}
+  const r=e.target.closest('[data-mr]');if(r){const ids=MU.lists[r.dataset.ctx]||[],i=+r.dataset.mr;
+    if(MU.queue[MU.qi]===ids[i]&&AU.src){mToggle();return;}
+    const from=MU.sel?($('#mu-body h2')||{}).textContent:({brani:'Tutti i brani'})[MU.tab]||'';mPlayList(ids,i,from);}
+});
+$('#v-musica').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.mu-card[role=button]')){e.preventDefault();e.target.click();}});
+$('#mu-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-mt]');if(!b)return;MU.tab=b.dataset.mt;MU.sel=null;MU.limit=200;renderMusic();});
+let muQT;$('#mu-q').addEventListener('input',e=>{clearTimeout(muQT);muQT=setTimeout(()=>{MU.q=e.target.value;MU.sel=null;MU.limit=200;if(MU.tab==='playlist')MU.tab='brani';renderMusic();},140);});
+$('#mp-play').onclick=$('#mpf-play').onclick=()=>mToggle();
+$('#mp-next').onclick=$('#mpf-next').onclick=()=>mNext();
+$('#mp-prev').onclick=$('#mpf-prev').onclick=()=>mPrev();
+$('#mp-shuf').onclick=$('#mpf-shuf').onclick=()=>mShuffle();
+$('#mp-rep').onclick=$('#mpf-rep').onclick=()=>mRepeat();
+$('#mp-like').onclick=$('#mpf-like').onclick=()=>{const id=MU.queue[MU.qi];if(id)muLike(id);};
+$('#mp-open').onclick=mOpen;$('#mpf-close').onclick=mClose;
+$('#mp-q').onclick=()=>{mOpen();$('#mpf-q').hidden=false;$('#mpf-cv').hidden=true;mQueue();};
+$('#mpf-qbtn').onclick=()=>{const q=$('#mpf-q');q.hidden=!q.hidden;$('#mpf-cv').hidden=!q.hidden;if(!q.hidden)mQueue();};
+$('#mpf-q').addEventListener('click',e=>{const rm=e.target.closest('[data-qrm]');if(rm){MU.queue.splice(+rm.dataset.qrm,1);mSave();mQueue();return;}
+  const r=e.target.closest('[data-qi]');if(r&&+r.dataset.qi!==MU.qi){MU.qi=+r.dataset.qi;mLoad(true);}});
+for(const r of ['#mp-range','#mpf-range']){const el=$(r);
+  el.addEventListener('input',()=>{MU.seeking=true;const d=AU.duration||0;el.style.setProperty('--p',el.value/10+'%');$(r==='#mp-range'?'#mp-cur':'#mpf-cur').textContent=fmtDur(d*el.value/1000);});
+  el.addEventListener('change',()=>{const d=AU.duration||0;if(d)AU.currentTime=d*el.value/1000;MU.seeking=false;mTime();});}
+$('#mp-vol').value=Math.round(AU.volume*100);$('#mp-vol').style.setProperty('--p',AU.volume*100+'%');
+$('#mp-vol').addEventListener('input',e=>{AU.volume=e.target.value/100;e.target.style.setProperty('--p',e.target.value+'%');mSave();});
+document.addEventListener('keydown',e=>{if($('#mp').hidden||e.target.closest('input,textarea,select,[contenteditable]')||document.querySelector('.ov:not([hidden])'))return;
+  if(e.code==='Space'&&!e.target.closest('button,a')){e.preventDefault();mToggle();}else if(e.key==='Escape'&&!$('#mpf').hidden)mClose();});
+setInterval(()=>{if(S.ready&&muHost())SUBS.music();},30000);
+
+/* ---------- collegare il PC ---------- */
+async function muNewKey(){const b=crypto.getRandomValues(new Uint8Array(24));const k='mk_'+b64u(b.buffer);await put('music/key',{key:k,created:Date.now()});return k;}
+async function muSetupModal(){
+  let key=muKey();
+  openModal(`<div class="mh"><h2>Collega il PC</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <p class="mini" style="margin:0 0 14px">Un piccolo programma sul PC legge la cartella della musica e la fa ascoltare qui, anche dal telefono fuori casa. Ogni brano passa da un collegamento cifrato e protetto dalla tua chiave personale.</p>
+  <div class="ip">
+    <div class="ip-step"><div class="ip-n">1</div><div><b>Attiva l'ingresso su Supabase (una volta sola)</b><p>Copia il codice, apri il <a href="${SUPA_SQL()}" target="_blank" rel="noopener">SQL Editor</a>, incollalo e premi <b>Run</b>.</p>
+      <div class="ip-b"><button class="btn sm" type="button" id="mu-sql">Copia codice SQL</button><button class="btn sm ghost" type="button" id="mu-chk">Verifica</button></div><p class="mini" id="mu-chk-r"></p></div></div>
+    <div class="ip-step"><div class="ip-n">2</div><div><b>Serve Python (gratis)</b><p>Se non ce l'hai, scaricalo da <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org</a>. Durante l'installazione spunta <b>“Add python.exe to PATH”</b>.</p></div></div>
+    <div class="ip-step"><div class="ip-n">3</div><div><b>Scarica e apri Capri Musica sul PC</b><p>Mettilo in una cartella tua (per esempio Documenti) e aprilo con doppio clic. La prima volta ti chiede la cartella della musica (Invio = Musica) e se partire da solo quando accendi il PC (Invio = sì).</p>
+      <div class="ip-b"><button class="btn sm pri" type="button" id="mu-dl">Scarica capri-musica.py</button></div></div></div>
+    <div class="ip-step"><div class="ip-n">4</div><div><b>Fatto</b><p id="mu-wait">${muOnline()?'✅ Il PC è collegato.':'In attesa del PC… appena il programma è acceso compare qui (entro un minuto).'}</p></div></div>
+  </div>
+  <div class="note-box" style="margin-top:14px">Il PC deve essere acceso e il programma aperto (se hai scelto l'avvio automatico parte da solo, senza finestre). Usa il collegamento gratuito di Cloudflare: non serve aprire porte del router. Per cambiare la cartella della musica: riapri il file e, appena parte, premi il tasto C.</div>
+  <div class="mf">${key?'<button class="btn danger ghost sm" id="mu-regen" type="button">Cambia chiave</button>':''}<span class="sp"></span><button class="btn pri" type="button" data-close>Chiudi</button></div>`,{wide:true});
+  let sql='';fetch('musica/capri_music.sql',{cache:'no-store'}).then(r=>r.text()).then(t=>sql=t).catch(()=>{});
+  $('#mu-sql').onclick=async()=>{if(!sql){try{sql=await (await fetch('musica/capri_music.sql',{cache:'no-store'})).text();}catch(e){toast('Non riesco a leggere il file','err');return;}}if(await copyText(sql))toast('Copiato: incollalo nel SQL Editor','ok');else toast('Copia non riuscita','err');};
+  $('#mu-chk').onclick=async()=>{const r=$('#mu-chk-r');r.textContent='Verifico…';const{error}=await SB.rpc('capri_music',{p_key:'x'.repeat(40)});const m=error?(error.message||''):'';
+    r.textContent=/chiave non valida/i.test(m)?'✅ Ingresso attivo.':/capri_music|PGRST202|schema cache|not find/i.test(m+(error&&error.code))?'Non ancora attivo: esegui prima il codice SQL.':'Risposta inattesa: '+m;};
+  $('#mu-dl').onclick=async()=>{const b=$('#mu-dl');b.disabled=true;try{if(!key)key=await muNewKey();const r=await fetch('musica/capri-musica.py',{cache:'no-store'});if(!r.ok)throw new Error('file non trovato');
+    const C=getCfg()||{};let txt=await r.text();const set=(name,v)=>{txt=txt.replace(name+' = "__'+name.replace('SUPA_','').replace('MUSIC_KEY','MUSICKEY')+'__"',name+' = '+JSON.stringify(v));};
+    set('SUPA_URL',C.url||'');set('SUPA_KEY',C.key||'');set('MUSIC_KEY',key);set('SITE',SITE_URL());
+    if(/= "__[A-Z]+__"/.test(txt))throw new Error('modello del programma non riconosciuto');
+    saveBlob('capri-musica.py',new Blob([txt],{type:'text/x-python'}));toast('Scaricato: aprilo sul PC','ok');}catch(e){toast('Errore: '+errMsg(e),'err');}b.disabled=false;};
+  const rg=$('#mu-regen');if(rg)rg.onclick=async()=>{if(!confirm('Il programma già installato smetterà di funzionare finché non riscarichi e riapri il nuovo file. Continuare?'))return;key=await muNewKey();MU.sigs.clear();toast('Nuova chiave: riscarica il programma','ok');};
+  const iv=setInterval(()=>{const w=$('#mu-wait');if(!w){clearInterval(iv);return;}if(muOnline())w.textContent='✅ Il PC è collegato: chiudi e goditi la musica.';},3000);
+}
+
 /* ================= CALENDARIO ================= */
 S.calMonth=isoDay().slice(0,7);S.calSel=isoDay();let CACT=[];
 const MONTHF=new Intl.DateTimeFormat('it-IT',{month:'long',year:'numeric'});
@@ -1740,14 +2010,14 @@ $('#menu-btn').onclick=()=>{
     let j;try{j=JSON.parse(await f.text());}catch(err){toast('File di backup non valido','err');return;}
     if(!j||j.app!=='capri'){toast('Questo non è un backup di Capri','err');return;}
     closeModal();let n=0;
-    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note','diary','habits'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
+    for(const coll of ['config','tickets','wishlist','sheets','spese','abbonamenti','note','diary','habits','playlists'])for(const d of j[coll]||[]){if(d&&d.id&&d.data){await put(coll+'/'+d.id,d.data);n++;}}
     toast(`Ripristinati ${n} elementi`,'ok');
   };
   $('#m-out').onclick=async()=>{await SB.auth.signOut();await authStorage.removeItem('capri-login-at');location.reload();};
 };
 
 /* ================= ROUTER + BOOT ================= */
-const VIEWS=['oggi','ticket','wishlist','finanze','diary','note','calendario'];
+const VIEWS=['oggi','ticket','wishlist','finanze','diary','note','musica','calendario'];
 const HALIAS={spese:['finanze','spese'],abbonamenti:['finanze','abb'],fogli:['finanze','fogli']};
 function route(){
   const hh=location.hash.slice(1);let v=hh;if(HALIAS[hh]){v=HALIAS[hh][0];S.fsub=HALIAS[hh][1];}
@@ -1756,7 +2026,7 @@ function route(){
   S.view=v;document.body.dataset.v=v;
   VIEWS.forEach(x=>{$('#v-'+x).hidden=x!==v;});
   $$('[data-nav]').forEach(a=>{a.classList.toggle('on',a.dataset.nav===v);if(a.dataset.nav===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();else if(v==='diary')renderDiary();else if(v==='calendario')renderCal();
+  if(v==='finanze')renderFin();else if(v==='oggi')renderOggi();else if(v==='note')renderNotes();else if(v==='diary')renderDiary();else if(v==='calendario')renderCal();else if(v==='musica'){muLoadLib();renderMusic();}
   try{if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});}catch(e){}
   scrollTo(0,0);
 }
@@ -1825,6 +2095,7 @@ async function start(session){
   $('#errbar').hidden=true;
   S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();renderDiary();if(S.view==='finanze')renderFin();
   addWeekly().catch(()=>{});
+  mUI();if(S.view==='musica'){muLoadLib();renderMusic();}else if(muHost())muLoadLib();
   {const h=lastBeat();if(!h||Date.now()-h.at>6*3600e3)beat().catch(()=>{});}
   try{SB.channel('docs-'+UID).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'user_id=eq.'+UID},onRealtime).subscribe();}catch(e){}
   let lastLoad=Date.now();

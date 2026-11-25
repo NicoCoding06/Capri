@@ -19,6 +19,10 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
   (secret `SUPABASE_SECRET_KEY`). Su ogni push a quei file gira una prova automatica.
 - `.github/scripts/ics.mjs`: calendario .ics (ticket con scadenza, ripetizioni, pagamenti). Il job orario lo carica
   nell'archivio pubblico Supabase `calendario` col nome segreto `calfeed/main.token` + `.ics` (stato in `calstate/main`).
+- `musica/capri-musica.py`: programma Python (solo libreria standard) per il PC: legge la cartella musica (tag ID3/FLAC/MP4/Vorbis,
+  copertine), server su 127.0.0.1 con URL firmate HMAC (`a/<id>`, `c/<id>`, `library`, `ping`; firma = HMAC-SHA256(chiave, "cosa.scadenza")
+  base64url 32 caratteri), tunnel `cloudflared` (trycloudflare.com) e segnale ogni minuto con `capri_music` (`musica/capri_music.sql`).
+  Il sito lo scarica con i segnaposto `__URL__`, `__KEY__`, `__MUSICKEY__`, `__SITE__` riempiti (sezione Musica → Collega il PC).
 - `setup.sql`: configurazione del database (tabella `docs`, permessi, archivio `allegati`, funzione `capri_api`).
 - `sicurezza.sql`: facoltativo, rende obbligatoria la verifica in due passaggi anche nel database (RLS restrictive su aal2).
 - `iphone/`: script Scriptable per iPhone (`capri-widget.js`, `capri-aggiungi.js` per Siri) e `capri_api.sql`.
@@ -29,6 +33,7 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
 Tabella unica `public.docs(user_id, coll, id, data jsonb)`, protetta da RLS.
 Collezioni: tickets, wishlist, sheets, config (doc `main`), spese, abbonamenti, note, diary,
 push, pushkeys (chiavi VAPID create dal telefono), pushstate, apitoken (chiave per widget e Siri),
+music (doc `key` chiave del PC, `host` {url, at, info}, `likes` {ids}), playlists {name, ids},
 habits (abitudini: days 0=lun…6=dom, done {data:1}), calfeed (link privato calendario), calstate, heartbeat.
 Ticket: `rep` (g1, s1, s2, m1, m3, m6, a1) = si ripete; completandolo nasce il successivo (`repSpawned`).
 Diary: `rev {n,next,last}` per il ripasso dilazionato (logica in digest.js, condivisa).
@@ -37,6 +42,7 @@ Notifiche: tipi riepilogo, ticket, scadenze, spese, settimana (lunedì), abitudi
 ## Sicurezza
 - `build.py` inserisce una Content-Security-Policy con l'impronta sha256 degli script interni: niente gestori inline
   (`onclick="…"`), niente `eval`. Un nuovo sito esterno da contattare va aggiunto a `connect-src` in `build.py`.
+  Per provare il player in locale: `CAPRI_DEV_ORIGIN=http://127.0.0.1:47123 python3 build.py` (poi ricostruire senza prima del push).
 - Accesso: email e password, oppure Face ID (passkey Supabase, da attivare in Authentication → Passkeys), verifica in due passaggi facoltativa (TOTP, menu ⋯ → Sicurezza dell'account), sessione di 48 ore.
 
 ## Come pubblicare una modifica
