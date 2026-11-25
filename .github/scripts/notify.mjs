@@ -39,7 +39,7 @@ async function selftest() {
     cfg: { name: 'Nico' },
   }, new Date());
   if (!payload || !payload.title || !payload.body.includes('Rinnovo passaporto')) throw new Error('riepilogo non valido');
-  const data = { tickets: [{ title: 'Bolletta', urg: 3, due: day(0), status: 'aperto' }], abb: [{ name: 'Palestra', amt: 30, next: day(1) }], spese: [{ d: rome(new Date()).today, amt: 12.5 }], cfg: { name: 'Nico', sbudget: 1000 } };
+  const data = { tickets: [{ title: 'Bolletta', urg: 3, due: day(0), status: 'aperto' }], abb: [{ name: 'Palestra', amt: 30, next: day(1) }], spese: [{ d: rome(new Date()).today, amt: 12.5 }], habits: [{ name: 'Leggere', emoji: '📚', days: ALL.slice(), done: {} }], diary: [{ title: 'git rebase -i', body: 'Riscrive la storia dei commit.', date: '2026-01-10' }], cfg: { name: 'Nico', sbudget: 1000 } };
   for (const kind of ['riepilogo', 'ticket', 'scadenze', 'spese', 'settimana', 'abitudini', 'ripasso', 'custom']) {
     const p = forSlot({ id: 'x', kind, title: 'Bevi acqua', text: '💧 Un bicchiere adesso' }, data, new Date());
     if (!p || !p.title) throw new Error('notifica ' + kind + ' non valida');
