@@ -27,6 +27,9 @@ MIME = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".flac":
         ".oga": "audio/ogg", ".opus": "audio/ogg", ".wav": "audio/wav"}
 COVERS = ("cover", "folder", "front", "album", "copertina")
 IS_WIN = os.name == "nt"
+IS_TERMUX = "com.termux" in os.environ.get("PREFIX", "")
+DEVICE = {"name": socket.gethostname()}
+ACTIVE = {"v": None}
 
 
 # ------------------------------------------------------------------ cartelle e impostazioni
@@ -79,7 +82,10 @@ def save_json(path, data):
 
 def default_music_dir():
     home = os.path.expanduser("~")
-    for c in (os.path.join(home, "Music"), os.path.join(home, "Musica")):
+    cands = [os.path.join(home, "Music"), os.path.join(home, "Musica")]
+    if IS_TERMUX:
+        cands = [os.path.join(home, "storage", "shared", "Music"), os.path.join(home, "storage", "music")] + cands
+    for c in cands:
         if os.path.isdir(c):
             return c
     return home
@@ -480,7 +486,7 @@ class Library:
     def as_json(self):
         with self.lock:
             lst = sorted(self.tracks.values(), key=lambda x: ((x["aa"] or x["a"]).lower(), x["al"].lower(), x.get("dn") or 0, x.get("n") or 0, x["t"].lower()))
-            return {"v": 1, "name": socket.gethostname(), "at": self.at, "tracks": lst}
+            return {"v": 1, "name": DEVICE["name"], "at": self.at, "tracks": lst}
 
 
 def _num(v):
@@ -586,7 +592,7 @@ class Handler(BaseHTTPRequestHandler):
                 ok = check("ping", q)
                 body = {"capri": True, "ok": ok}
                 if ok:
-                    body.update({"tracks": len(LIB.tracks), "name": socket.gethostname(), "v": VERSION, "at": LIB.at})
+                    body.update({"tracks": len(LIB.tracks), "name": DEVICE["name"], "v": VERSION, "at": LIB.at})
                 return self._send(200, json.dumps(body).encode(), extra={"Cache-Control": "no-store"})
             if parts == ["library"]:
                 if not check("library", q):
@@ -675,12 +681,19 @@ def heartbeat(url):
     if not SUPA_URL.startswith("https://"):
         return False
     body = json.dumps({"p_key": MUSIC_KEY, "p_url": url, "p_info": {"tracks": len(LIB.tracks) if LIB else 0,
-                       "name": socket.gethostname(), "v": VERSION, "os": platform.system(), "lib": LIB.at if LIB else 0}}).encode()
+                       "name": DEVICE["name"], "v": VERSION, "os": "Android" if IS_TERMUX else platform.system(), "lib": LIB.at if LIB else 0}}).encode()
     req = urllib.request.Request(SUPA_URL.rstrip("/") + "/rest/v1/rpc/capri_music", data=body, method="POST",
                                  headers={"apikey": SUPA_KEY, "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
-            r.read()
+            res = json.loads(r.read() or b"{}")
+        act = res.get("active", True) if isinstance(res, dict) else True
+        if url and act != ACTIVE["v"]:
+            if act:
+                log("✓ Questo dispositivo ora serve la musica a Capri.")
+            else:
+                log(f"In attesa: la musica la sta già servendo «{res.get('busy') or 'un altro dispositivo'}». Se si spegne, subentro io entro pochi minuti.")
+        ACTIVE["v"] = act if url else None
         return True
     except urllib.error.HTTPError as e:
         msg = e.read().decode("utf-8", "replace")[:300]
@@ -703,6 +716,16 @@ def cloudflared_path():
         return local
     found = shutil.which("cloudflared")
     if found:
+        return found
+    if IS_TERMUX:
+        log("Installo cloudflared con pkg (solo la prima volta)…")
+        try:
+            subprocess.run(["pkg", "install", "-y", "cloudflared"], check=False)
+        except Exception as e:
+            log("⚠ pkg non riuscito:", e)
+        found = shutil.which("cloudflared")
+        if not found:
+            log("⚠ Scrivi in Termux:  pkg install cloudflared   e riavvia Capri Musica.")
         return found
     sysname, arch = platform.system(), platform.machine().lower()
     arch = "arm64" if arch in ("arm64", "aarch64") else "amd64"
@@ -787,6 +810,18 @@ def startup_file():
 
 
 def set_autostart(on):
+    if IS_TERMUX:
+        d = os.path.join(os.path.expanduser("~"), ".termux", "boot")
+        f = os.path.join(d, "capri-musica.sh")
+        if not on:
+            if os.path.exists(f):
+                os.remove(f)
+            return True
+        os.makedirs(d, exist_ok=True)
+        with open(f, "w") as fh:
+            fh.write("#!/data/data/com.termux/files/usr/bin/sh\ntermux-wake-lock\nnohup python {} --avvio > /dev/null 2>&1 &\n".format(os.path.abspath(__file__)))
+        os.chmod(f, 0o755)
+        return True
     if not IS_WIN:
         return False
     f = startup_file()
@@ -838,17 +873,49 @@ def first_setup(cfg, args):
 
 
 def main():
-    global LIB, QUIET
+    global LIB, QUIET, SUPA_URL, SUPA_KEY, MUSIC_KEY, SITE
     args = sys.argv[1:]
     opt = lambda name: args[args.index(name) + 1] if name in args and args.index(name) + 1 < len(args) else None
     if "--avvio" in args or (IS_WIN and os.path.basename(sys.executable).lower() == "pythonw.exe"):
         QUIET = True
+    cfg = load_json(CFG_FILE, {})
+    for flag, k in (("--chiave", "chiave"), ("--supabase", "supabase"), ("--pk", "pk"), ("--sito", "sito"), ("--nome", "nome")):
+        if opt(flag):
+            cfg[k] = opt(flag)
+            save_json(CFG_FILE, cfg)
+    if MUSIC_KEY.startswith("__") and cfg.get("chiave"):
+        MUSIC_KEY = cfg["chiave"]
+    if SUPA_URL.startswith("__") and cfg.get("supabase"):
+        SUPA_URL = cfg["supabase"]
+    if SUPA_KEY.startswith("__") and cfg.get("pk"):
+        SUPA_KEY = cfg["pk"]
+    if SITE.startswith("__") and cfg.get("sito"):
+        SITE = cfg["sito"]
+    if cfg.get("nome"):
+        DEVICE["name"] = cfg["nome"]
+    elif IS_TERMUX:
+        try:
+            model = subprocess.run(["getprop", "ro.product.model"], capture_output=True, text=True, timeout=5).stdout.strip()
+        except Exception:
+            model = ""
+        DEVICE["name"] = ("Tablet " + model).strip() if model else "Tablet Android"
     if MUSIC_KEY.startswith("__") or len(MUSIC_KEY) < 32:
         print("Questo file non contiene la tua chiave: scaricalo da Capri (sezione Musica → Collega il PC).")
         if not QUIET:
             ask("Premi Invio per chiudere.")
         return
-    cfg = load_json(CFG_FILE, {})
+    if IS_TERMUX:
+        try:
+            subprocess.Popen(["termux-wake-lock"])
+        except Exception:
+            pass
+        shared = os.path.join(os.path.expanduser("~"), "storage", "shared")
+        for i in range(60):
+            if os.path.isdir(shared):
+                break
+            if i == 0:
+                log("Aspetto il permesso per leggere la memoria del tablet (tocca Consenti)…")
+            time.sleep(2)
     cfg.setdefault("folders", [default_music_dir()])
     cfg.setdefault("port", 47123)
     if opt("--cartella"):

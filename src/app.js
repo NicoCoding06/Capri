@@ -1708,6 +1708,16 @@ async function muSetupModal(){
       <div class="ip-b"><button class="btn sm pri" type="button" id="mu-dl">Scarica capri-musica.py</button></div></div></div>
     <div class="ip-step"><div class="ip-n">4</div><div><b>Fatto</b><p id="mu-wait">${muOnline()?'✅ Il PC è collegato.':'In attesa del PC… appena il programma è acceso compare qui (entro un minuto).'}</p></div></div>
   </div>
+  <details class="ip-more" style="margin-top:14px"><summary><b>Hai un tablet Android da lasciare acceso?</b> Può fare da “PC” al posto suo (consuma molto meno).</summary>
+    <div class="ip" style="margin-top:12px">
+      <div class="ip-step"><div class="ip-n">1</div><div><b>Installa Termux e Termux:Boot</b><p>Dal tablet, da F-Droid: <a href="https://f-droid.org/packages/com.termux/" target="_blank" rel="noopener">Termux</a> e <a href="https://f-droid.org/packages/com.termux.boot/" target="_blank" rel="noopener">Termux:Boot</a> (apri Termux:Boot una volta, così parte da solo all'accensione).</p></div></div>
+      <div class="ip-step"><div class="ip-n">2</div><div><b>Copia le canzoni</b><p>Mettile nella cartella <b>Music</b> del tablet (dal PC col cavo USB). Con la stessa struttura di cartelle del PC, playlist e “Mi piace” restano validi.</p></div></div>
+      <div class="ip-step"><div class="ip-n">3</div><div><b>Incolla un comando in Termux</b><p>Copia, incolla in Termux e premi Invio. Quando Android chiede il permesso per i file, tocca <b>Consenti</b>.</p>
+        <div class="ip-b"><button class="btn sm pri" type="button" id="mu-android">Copia il comando per Android</button></div></div></div>
+      <div class="ip-step"><div class="ip-n">4</div><div><b>Non farlo addormentare</b><p>Impostazioni di Android → App → Termux → Batteria → <b>Senza restrizioni</b>. Lascia il tablet in carica.</p></div></div>
+    </div>
+    <p class="mini">Se PC e tablet sono accesi insieme, risponde il primo; se si spegne, subentra l'altro entro pochi minuti.</p>
+  </details>
   <div class="note-box" style="margin-top:14px">Il PC deve essere acceso e il programma aperto (se hai scelto l'avvio automatico parte da solo, senza finestre). Usa il collegamento gratuito di Cloudflare: non serve aprire porte del router. Per cambiare la cartella della musica: riapri il file e, appena parte, premi il tasto C.</div>
   <div class="mf">${key?'<button class="btn danger ghost sm" id="mu-regen" type="button">Cambia chiave</button>':''}<span class="sp"></span><button class="btn pri" type="button" data-close>Chiudi</button></div>`,{wide:true});
   let sql='';fetch('musica/capri_music.sql',{cache:'no-store'}).then(r=>r.text()).then(t=>sql=t).catch(()=>{});
@@ -1719,6 +1729,9 @@ async function muSetupModal(){
     set('SUPA_URL',C.url||'');set('SUPA_KEY',C.key||'');set('MUSIC_KEY',key);set('SITE',SITE_URL());
     if(/= "__[A-Z]+__"/.test(txt))throw new Error('modello del programma non riconosciuto');
     saveBlob('capri-musica.py',new Blob([txt],{type:'text/x-python'}));toast('Scaricato: aprilo sul PC','ok');}catch(e){toast('Errore: '+errMsg(e),'err');}b.disabled=false;};
+  $('#mu-android').onclick=async()=>{try{if(!key)key=await muNewKey();const C=getCfg()||{},q=v=>"'"+String(v).replace(/'/g,"'\\''")+"'";
+    const cmd=`pkg install -y python cloudflared && termux-setup-storage; curl -fsSL ${q(SITE_URL()+'musica/capri-musica.py')} -o ~/capri-musica.py && python ~/capri-musica.py --chiave ${q(key)} --supabase ${q(C.url||'')} --pk ${q(C.key||'')} --sito ${q(SITE_URL())} --cartella ~/storage/shared/Music --imposta-avvio`;
+    if(await copyText(cmd))toast('Comando copiato: incollalo in Termux sul tablet','ok');else{prompt('Copia questo comando:',cmd);}}catch(e){toast('Errore: '+errMsg(e),'err');}};
   const rg=$('#mu-regen');if(rg)rg.onclick=async()=>{if(!confirm('Il programma già installato smetterà di funzionare finché non riscarichi e riapri il nuovo file. Continuare?'))return;key=await muNewKey();MU.sigs.clear();toast('Nuova chiave: riscarica il programma','ok');};
   const iv=setInterval(()=>{const w=$('#mu-wait');if(!w){clearInterval(iv);return;}if(muOnline())w.textContent='✅ Il PC è collegato: chiudi e goditi la musica.';},3000);
 }

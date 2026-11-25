@@ -1,6 +1,7 @@
 -- Capri Musica: il programma sul PC dice "sono acceso, mi trovi qui".
 -- Accetta solo la chiave musica personale (la crea Capri: sezione Musica → Collega il PC).
 -- Può solo aggiornare lo stato del PC (indirizzo, numero di brani): non legge né modifica altri dati.
+-- Con più dispositivi (PC, tablet) risponde il primo acceso; se smette di dare segnale, subentra l'altro.
 -- Incolla tutto nel SQL Editor di Supabase e premi Run. Si può rieseguire senza danni.
 
 grant usage on schema public to anon;
@@ -13,6 +14,9 @@ set search_path = public
 as $$
 declare
   v_user uuid;
+  v_cur jsonb;
+  v_now bigint := (extract(epoch from clock_timestamp()) * 1000)::bigint;
+  v_name text := coalesce(p_info->>'name', '');
 begin
   if p_key is null or length(p_key) < 32 then
     raise exception 'chiave non valida';
@@ -27,13 +31,19 @@ begin
   if p_url is not null and p_url !~ '^https://[a-z0-9-]+\.trycloudflare\.com$' then
     raise exception 'indirizzo non valido';
   end if;
+  select d.data into v_cur from public.docs d where d.user_id = v_user and d.coll = 'music' and d.id = 'host';
+  if v_cur is not null and v_cur->>'url' is not null
+     and coalesce(v_cur->'info'->>'name', '') is distinct from v_name
+     and coalesce((v_cur->>'at')::bigint, 0) > v_now - 150000 then
+    return jsonb_build_object('ok', true, 'active', false, 'busy', v_cur->'info'->>'name');
+  end if;
   insert into public.docs (user_id, coll, id, data, updated_at)
   values (v_user, 'music', 'host', jsonb_build_object(
             'url', p_url,
-            'at', (extract(epoch from clock_timestamp()) * 1000)::bigint,
+            'at', v_now,
             'info', coalesce(p_info, '{}'::jsonb) - 'url'), now())
   on conflict (user_id, coll, id) do update set data = excluded.data, updated_at = now();
-  return jsonb_build_object('ok', true);
+  return jsonb_build_object('ok', true, 'active', true);
 end;
 $$;
 
