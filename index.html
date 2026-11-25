@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-61Z0H66YDocApRVq4ZN3wCcdskb7CmYD+MLzsJiHElA=' 'sha256-jSuzXeIKYFMy5WG962hRVFwRfnOhjtRm4MocjazqAts='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https://*.trycloudflare.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.scryfall.com https://*.trycloudflare.com; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-61Z0H66YDocApRVq4ZN3wCcdskb7CmYD+MLzsJiHElA=' 'sha256-jXvUTebMW2NM38pdSSrour21lv1o6RiaVfGYr8YU1XE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https://*.trycloudflare.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.scryfall.com https://*.trycloudflare.com; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07060a">
@@ -661,6 +661,12 @@ body.has-mp main{padding-bottom:110px}
 .ip-more{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--p1)}.ip-more summary{cursor:pointer;color:var(--mut);font-size:14px}.ip-more summary b{color:#fff}
 .mu-menu .mu-del{color:var(--u4)}.mu-menu .mu-del svg{color:var(--u4)}.mu-menu .mu-del:hover{border-color:var(--u4)}
 .mp-trash:hover{color:var(--u4)}
+#mu-go{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:0;cursor:pointer;color:#fff;font:inherit;text-align:center;padding:24px;
+  background:radial-gradient(600px 400px at 50% 40%,color-mix(in srgb,var(--mu) 22%,transparent),transparent 70%),rgba(7,6,10,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#mu-go[hidden]{display:none}#mu-go b{font-size:26px;letter-spacing:-.01em}#mu-go span{color:var(--mut);max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#mu-go em{font-style:normal;font-size:13px;color:var(--mu)}
+.mu-go-b{width:110px;height:110px;border-radius:50%;background:var(--mu);color:#000!important;display:grid;place-items:center;box-shadow:0 0 60px -6px var(--mu);animation:muPulse2 1.6s ease-in-out infinite;margin-bottom:10px}
+.mu-go-b svg{width:48px;height:48px}@keyframes muPulse2{50%{transform:scale(1.06);box-shadow:0 0 90px 0 var(--mu)}}
+@media (prefers-reduced-motion:reduce){.mu-go-b{animation:none}}
 </style>
 </head>
 <body data-v="oggi">
@@ -2914,6 +2920,29 @@ document.addEventListener('keydown',e=>{if($('#mp').hidden||e.target.closest('in
   if(e.code==='Space'&&!e.target.closest('button,a')){e.preventDefault();mToggle();}else if(e.key==='Escape'&&!$('#mpf').hidden)mClose();});
 setInterval(()=>{if(S.ready&&muHost())SUBS.music();},30000);
 
+/* ---------- comando vocale: apre Capri e parte la musica in casuale ---------- */
+let muAutoRun=0;
+async function muAutoShuffle(){
+  const run=++muAutoRun,t0=Date.now();
+  while(Date.now()-t0<25000){
+    if(run!==muAutoRun)return;
+    if(S.ready&&muOnline()&&MU.lib.length&&MU.reach)break;
+    if(S.ready&&muHost()&&!MU.loading&&MU.reach!==true)muLoadLib(true);
+    await new Promise(r=>setTimeout(r,500));
+  }
+  if(!(S.ready&&muOnline()&&MU.lib.length)){toast('Nessun dispositivo acceso con la musica: accendi il tablet','err');return;}
+  if(!AU.paused&&MU.queue.length)return;
+  const ids=MU.lib.map(t=>t.i);MU.shuffle=true;mPlayList(ids,Math.floor(Math.random()*ids.length),'Casuale');
+  setTimeout(()=>{if(AU.paused)muTapToPlay();},900);
+}
+function muTapToPlay(){
+  let o=$('#mu-go');if(!o){o=document.createElement('button');o.id='mu-go';o.type='button';document.body.append(o);}
+  const t=MU.by[MU.queue[MU.qi]]||{};
+  o.innerHTML=`<span class="mu-go-b"><svg><use href="#i-mplay"/></svg></span><b>Tocca per partire</b><span>${esc(t.t||'')}${t.a?' · '+esc(t.a):''}</span><em>Casuale su ${MU.lib.length.toLocaleString('it-IT')} brani</em>`;
+  o.hidden=false;
+  o.onclick=()=>{o.hidden=true;const p=AU.play();if(p&&p.catch)p.catch(()=>mLoad(true));};
+}
+
 /* ---------- collegare il PC ---------- */
 async function muNewKey(){const b=crypto.getRandomValues(new Uint8Array(24));const k='mk_'+b64u(b.buffer);await put('music/key',{key:k,created:Date.now()});return k;}
 async function muSetupModal(){
@@ -2928,6 +2957,14 @@ async function muSetupModal(){
       <div class="ip-b"><button class="btn sm pri" type="button" id="mu-dl">Scarica capri-musica.py</button></div></div></div>
     <div class="ip-step"><div class="ip-n">4</div><div><b>Fatto</b><p id="mu-wait">${muOnline()?'✅ Il PC è collegato.':'In attesa del PC… appena il programma è acceso compare qui (entro un minuto).'}</p></div></div>
   </div>
+  <details class="ip-more" style="margin-top:14px" open><summary><b>Comando vocale: “Ehi Siri, Musica Capri”</b> apre Capri e fa partire la musica in casuale.</summary>
+    <div class="ip" style="margin-top:12px">
+      <div class="ip-step"><div class="ip-n">1</div><div><b>Copia il link</b><p>Usa il primo se Capri è sulla schermata Home come app (consigliato), il secondo per aprirlo in Safari.</p>
+        <div class="ip-b"><button class="btn sm pri" type="button" data-vl="webapp">Link per l'app sulla Home</button><button class="btn sm ghost" type="button" data-vl="https">Link per Safari</button></div></div></div>
+      <div class="ip-step"><div class="ip-n">2</div><div><b>Crea il comando</b><p>App <b>Comandi</b> → <b>+</b> → cerca l'azione <b>Apri URL</b> e incolla il link. In alto rinomina il comando <b>Musica Capri</b> e tocca Fine.</p></div></div>
+      <div class="ip-step"><div class="ip-n">3</div><div><b>Usalo</b><p>Di' <b>“Ehi Siri, Musica Capri”</b> (o tocca il comando). Capri si apre e parte la musica in casuale; se l'iPhone chiede un tocco per l'audio, compare un grande ▶: basta toccare lo schermo.</p></div></div>
+    </div>
+  </details>
   <details class="ip-more" style="margin-top:14px"><summary><b>Hai un tablet Android da lasciare acceso?</b> Può fare da “PC” al posto suo (consuma molto meno).</summary>
     <div class="ip" style="margin-top:12px">
       <div class="ip-step"><div class="ip-n">1</div><div><b>Installa Termux e Termux:Boot</b><p>Dal tablet, da F-Droid: <a href="https://f-droid.org/packages/com.termux/" target="_blank" rel="noopener">Termux</a> e <a href="https://f-droid.org/packages/com.termux.boot/" target="_blank" rel="noopener">Termux:Boot</a> (apri Termux:Boot una volta, così parte da solo all'accensione).</p></div></div>
@@ -2949,6 +2986,8 @@ async function muSetupModal(){
     set('SUPA_URL',C.url||'');set('SUPA_KEY',C.key||'');set('MUSIC_KEY',key);set('SITE',SITE_URL());
     if(/= "__[A-Z]+__"/.test(txt))throw new Error('modello del programma non riconosciuto');
     saveBlob('capri-musica.py',new Blob([txt],{type:'text/x-python'}));toast('Scaricato: aprilo sul PC','ok');}catch(e){toast('Errore: '+errMsg(e),'err');}b.disabled=false;};
+  DLG.querySelectorAll('[data-vl]').forEach(b=>b.onclick=async()=>{const u=SITE_URL()+'#casuale',l=b.dataset.vl==='webapp'?u.replace(/^https:\/\//,'webapp://'):u;
+    if(await copyText(l))toast('Link copiato: incollalo nell\'azione “Apri URL”','ok');else prompt('Copia questo link:',l);});
   $('#mu-android').onclick=async()=>{try{if(!key)key=await muNewKey();const C=getCfg()||{},q=v=>"'"+String(v).replace(/'/g,"'\\''")+"'";
     const cmd=`pkg install -y python cloudflared && termux-setup-storage; curl -fsSL ${q(SITE_URL()+'musica/capri-musica.py')} -o ~/capri-musica.py && python ~/capri-musica.py --chiave ${q(key)} --supabase ${q(C.url||'')} --pk ${q(C.key||'')} --sito ${q(SITE_URL())} --cartella ~/storage/shared --imposta-avvio`;
     if(await copyText(cmd))toast('Comando copiato: incollalo in Termux sul tablet','ok');else{prompt('Copia questo comando:',cmd);}}catch(e){toast('Errore: '+errMsg(e),'err');}};
@@ -3253,7 +3292,9 @@ $('#menu-btn').onclick=()=>{
 const VIEWS=['oggi','ticket','wishlist','finanze','diary','note','musica','calendario'];
 const HALIAS={spese:['finanze','spese'],abbonamenti:['finanze','abb'],fogli:['finanze','fogli']};
 function route(){
-  const hh=location.hash.slice(1);let v=hh;if(HALIAS[hh]){v=HALIAS[hh][0];S.fsub=HALIAS[hh][1];}
+  let hh=location.hash.slice(1);
+  if(hh==='casuale'||hh==='musica-casuale'){hh='musica';try{history.replaceState(null,'','#musica');}catch(e){}muAutoShuffle();}
+  let v=hh;if(HALIAS[hh]){v=HALIAS[hh][0];S.fsub=HALIAS[hh][1];}
   if(!VIEWS.includes(v))v='oggi';
   if(S.ed&&!(v==='finanze'&&S.fsub==='fogli'))commitEdit(0,0,true);
   S.view=v;document.body.dataset.v=v;

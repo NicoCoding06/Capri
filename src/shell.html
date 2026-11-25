@@ -661,6 +661,12 @@ body.has-mp main{padding-bottom:110px}
 .ip-more{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--p1)}.ip-more summary{cursor:pointer;color:var(--mut);font-size:14px}.ip-more summary b{color:#fff}
 .mu-menu .mu-del{color:var(--u4)}.mu-menu .mu-del svg{color:var(--u4)}.mu-menu .mu-del:hover{border-color:var(--u4)}
 .mp-trash:hover{color:var(--u4)}
+#mu-go{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:0;cursor:pointer;color:#fff;font:inherit;text-align:center;padding:24px;
+  background:radial-gradient(600px 400px at 50% 40%,color-mix(in srgb,var(--mu) 22%,transparent),transparent 70%),rgba(7,6,10,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#mu-go[hidden]{display:none}#mu-go b{font-size:26px;letter-spacing:-.01em}#mu-go span{color:var(--mut);max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#mu-go em{font-style:normal;font-size:13px;color:var(--mu)}
+.mu-go-b{width:110px;height:110px;border-radius:50%;background:var(--mu);color:#000!important;display:grid;place-items:center;box-shadow:0 0 60px -6px var(--mu);animation:muPulse2 1.6s ease-in-out infinite;margin-bottom:10px}
+.mu-go-b svg{width:48px;height:48px}@keyframes muPulse2{50%{transform:scale(1.06);box-shadow:0 0 90px 0 var(--mu)}}
+@media (prefers-reduced-motion:reduce){.mu-go-b{animation:none}}
 </style>
 </head>
 <body data-v="oggi">

@@ -31,6 +31,8 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
   (risponde `active:false, busy:<nome>` agli altri) finché non tace per 150 s. Restituisce anche `del` (brani eliminati da Capri):
   ogni dispositivo li sposta in `<cartella>/.capri-cestino/` (indice `cestino.json`), li rimette a posto se tolti dall'elenco
   e li cancella dopo 30 giorni. Endpoint firmati `del/<id>`, `restore/<id>`, `quit/x`; `--riavvia` chiude la versione già accesa.
+  Link `#casuale` (anche `webapp://…/Capri/#casuale` da Comandi/Siri): apre Musica e parte in casuale; se il browser
+  blocca l'audio senza tocco mostra il grande ▶ «Tocca per partire» (`#mu-go`).
   Il sito lo scarica con i segnaposto `__URL__`, `__KEY__`, `__MUSICKEY__`, `__SITE__` riempiti (sezione Musica → Collega il PC).
 - `setup.sql`: configurazione del database (tabella `docs`, permessi, archivio `allegati`, funzione `capri_api`).
 - `sicurezza.sql`: facoltativo, rende obbligatoria la verifica in due passaggi anche nel database (RLS restrictive su aal2).
