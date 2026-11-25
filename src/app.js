@@ -5,6 +5,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const clone=o=>JSON.parse(JSON.stringify(o??null));
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const safeUrl=u=>/^https?:\/\//i.test(String(u||''))?String(u):'#';
 const ico=(n,cls='')=>`<svg${cls?` class="${cls}"`:''}><use href="#i-${n}"/></svg>`;
 const EUR=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'});
 const eur=n=>typeof n==='number'&&isFinite(n)?EUR.format(n):'—';
@@ -371,7 +372,7 @@ function wCard(w){
       <div class="wmeta">${last?`Prezzo del ${fmtDate(last.d)} · ${last.s==='auto'?(last.src||'automatico'):'inserito a mano'}`:(got?'':'Prezzo non ancora registrato')}</div>
       ${w.pnote&&!got?`<div class="wmeta">${esc(w.pnote)}</div>`:''}
       ${w.note?`<div class="wnote">${esc(w.note)}</div>`:''}
-      ${(w.links||[]).length?`<div class="files">${w.links.map(u=>`<a class="file" href="${esc(u)}" target="_blank" rel="noopener">${esc(host(u))}</a>`).join('')}</div>`:''}
+      ${(w.links||[]).length?`<div class="files">${w.links.map(u=>`<a class="file" href="${esc(safeUrl(u))}" target="_blank" rel="noopener">${esc(host(u))}</a>`).join('')}</div>`:''}
       <div class="wf">${got?'':`<button class="btn sm ghost" data-act="price">${w.mtg?ico('refresh'):''}Prezzo</button>`}<button class="btn sm ghost" data-act="edit">Modifica</button><button class="btn sm ${got?'ghost':'ok'}" data-act="got">${got?'Rimetti':'Preso!'}</button></div>
     </div></article>`;
 }
@@ -475,7 +476,7 @@ function priceModal(w){
   openModal(`<div class="mh"><h2>Prezzo</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
   <p style="margin-top:0"><b>${esc(w.name)}</b><br><span class="mut small">Ultimo prezzo: ${eur(priceOf(w))}${h.length?' del '+fmtDate(h[h.length-1].d):''}</span></p>
   ${w.mtg?`<button class="btn ok" id="p-auto" type="button" style="width:100%;margin-bottom:12px">${ico('refresh')}Aggiorna ora da Scryfall</button>`:''}
-  ${(w.links||[]).length?`<div class="files" style="margin-bottom:12px">${w.links.map(u=>`<a class="file" href="${esc(u)}" target="_blank" rel="noopener">Controlla su ${esc(host(u))}</a>`).join('')}</div>`:''}
+  ${(w.links||[]).length?`<div class="files" style="margin-bottom:12px">${w.links.map(u=>`<a class="file" href="${esc(safeUrl(u))}" target="_blank" rel="noopener">Controlla su ${esc(host(u))}</a>`).join('')}</div>`:''}
   <label class="f"><span>Prezzo di oggi per un pezzo (€)</span><input id="p-val" inputmode="decimal" placeholder="Es. 24,90" autofocus></label>
   <div class="mf"><span class="sp"></span><button class="btn ghost" data-close>Annulla</button><button class="btn pri" id="p-ok">Registra prezzo</button></div>`);
   const a=$('#p-auto');if(a)a.onclick=async()=>{a.disabled=true;a.textContent='Aggiornamento…';const ok=await refreshPrice(w);closeModal();if(ok)toast('Prezzo aggiornato','ok');};
@@ -1436,6 +1437,50 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setInterval(()=>{if(wakeWanted()&&document.visibilityState==='visible'&&!wakeActive())wakeOn();},30000);
 wakeOn();
 
+/* ================= SICUREZZA DELL'ACCOUNT ================= */
+async function securityModal(){
+  const at=await loginAt();const until=at?new Date(at+LOGIN_TTL):null;
+  let f=null,mfaErr='';try{f=await totpFactor();}catch(e){mfaErr=errMsg(e);}
+  openModal(`<div class="mh"><h2>Sicurezza</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <div class="sec">
+    <div class="sec-row"><div><b>Verifica in due passaggi</b><p class="mini">${f?'✅ Attiva: per entrare servono password e codice dell\'app di autenticazione.':'Oltre alla password, chiede un codice di 6 cifre da un\'app come Google Authenticator, Authy o Password di iPhone.'}${mfaErr?' ('+esc(mfaErr)+')':''}</p></div>
+      ${f?'<button class="btn sm danger" id="sc-mfa-off" type="button">Disattiva</button>':'<button class="btn sm pri" id="sc-mfa-on" type="button">Attiva</button>'}</div>
+    <div id="sc-enroll"></div>
+    ${f?`<div class="sec-row"><div><b>Rendila obbligatoria anche per il database</b><p class="mini">Senza il codice, il database rifiuta ogni richiesta, anche fuori dal sito. Copia il codice, incollalo nel <a href="${SUPA_SQL()}" target="_blank" rel="noopener">SQL Editor di Supabase</a> e premi Run. Widget, Siri e notifiche continuano a funzionare.</p></div><button class="btn sm" data-sqlcp type="button">Copia SQL</button></div>`:''}
+    <form class="sec-row" id="sc-pw"><div style="flex:1"><b>Cambia password</b><p class="mini">Almeno 10 caratteri. Meglio una frase lunga.</p>
+      <div class="sec-pw"><input type="password" id="sc-p1" autocomplete="new-password" placeholder="Nuova password" minlength="10" required><input type="password" id="sc-p2" autocomplete="new-password" placeholder="Ripetila" minlength="10" required></div></div>
+      <button class="btn sm" type="submit">Salva</button></form>
+    <div class="sec-row"><div><b>Esci da tutti i dispositivi</b><p class="mini">Utile se hai usato un computer non tuo o hai perso il telefono. ${until?`Su questo dispositivo l'accesso scade il ${until.toLocaleDateString('it-IT',{day:'numeric',month:'long'})} alle ${until.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}.`:''}</p></div><button class="btn sm danger" id="sc-out" type="button">Esci ovunque</button></div>
+  </div>`,{wide:true});
+  const on=$('#sc-mfa-on');
+  if(on)on.onclick=async()=>{on.disabled=true;
+    try{const old=await SB.auth.mfa.listFactors();for(const x of((old.data&&(old.data.all||old.data.totp))||[]).filter(x=>x.status!=='verified'&&(x.factor_type||'totp')==='totp'))await SB.auth.mfa.unenroll({factorId:x.id});
+      const{data,error}=await SB.auth.mfa.enroll({factorType:'totp',friendlyName:'Capri '+new Date().toISOString().slice(0,10)});if(error)throw error;
+      const qr=String(data.totp.qr_code||'');const src=/^data:image\/svg\+xml/.test(qr)?qr:'data:image/svg+xml;utf-8,'+encodeURIComponent(qr);
+      $('#sc-enroll').innerHTML=`<div class="sec-qr"><img src="${esc(src)}" alt="Codice QR da inquadrare con l'app di autenticazione"><div>
+        <p class="mini" style="margin-top:0">1. Apri l'app di autenticazione e inquadra il codice QR. Sull'iPhone puoi anche tenere premuto il codice segreto qui sotto e copiarlo.</p>
+        <code class="sec-secret">${esc(data.totp.secret)}</code>
+        ${data.totp.uri?`<a class="btn sm" style="margin-top:8px" href="${esc(data.totp.uri)}">Apri nell'app di autenticazione (dal telefono)</a>`:''}
+        <p class="mini">2. Scrivi il codice di 6 cifre che compare nell'app.</p>
+        <div class="sec-pw"><input id="sc-code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456"><button class="btn sm pri" id="sc-verify" type="button">Conferma</button></div></div></div>`;
+      on.hidden=true;
+      $('#sc-verify').onclick=async()=>{try{const r=await SB.auth.mfa.challengeAndVerify({factorId:data.id,code:$('#sc-code').value.replace(/\s/g,'')});if(r.error)throw r.error;toast('Verifica in due passaggi attiva','ok');securityModal();}
+        catch(e){toast('Codice non valido: riprova con quello nuovo','err');}};
+    }catch(e){toast('Non riesco ad attivarla: '+errMsg(e),'err');on.disabled=false;}};
+  const off=$('#sc-mfa-off');
+  if(off)off.onclick=async()=>{if(!confirm('Disattivare la verifica in due passaggi? Per entrare basterà di nuovo la sola password.'))return;
+    try{const{error}=await SB.auth.mfa.unenroll({factorId:f.id});if(error)throw error;toast('Verifica in due passaggi disattivata','ok');securityModal();}catch(e){toast('Non riuscito: '+errMsg(e),'err');}};
+  const cp=DLG.querySelector('[data-sqlcp]');
+  if(cp)cp.onclick=async()=>{try{const r=await fetch('sicurezza.sql',{cache:'no-store'});if(!r.ok)throw new Error('file non trovato');if(await copyText(await r.text()))toast('Copiato: incollalo nel SQL Editor','ok');else toast('Copia non riuscita','err');}catch(e){toast('Errore: '+errMsg(e),'err');}};
+  $('#sc-pw').onsubmit=async e=>{e.preventDefault();const p1=$('#sc-p1').value,p2=$('#sc-p2').value;
+    if(p1.length<10){toast('Serve una password di almeno 10 caratteri','err');return;}if(p1!==p2){toast('Le due password non coincidono','err');return;}
+    const{error}=await SB.auth.updateUser({password:p1});
+    if(error){toast(/reauth|recent/i.test(error.message)?'Per sicurezza Supabase chiede di rientrare: esci, rientra e riprova.':'Non riuscito: '+errMsg(error),'err');return;}
+    $('#sc-p1').value=$('#sc-p2').value='';toast('Password cambiata','ok');};
+  $('#sc-out').onclick=async()=>{if(!confirm('Esci da Capri su tutti i dispositivi, compreso questo?'))return;
+    try{await SB.auth.signOut({scope:'global'});}catch(e){}await authStorage.removeItem('capri-login-at');location.reload();};
+}
+
 /* ================= SUPABASE SVEGLIO (contro la pausa del piano gratuito) ================= */
 const lastBeat=()=>{const d=CACHE.heartbeat&&CACHE.heartbeat.get('main');return d&&d.at?d:null;};
 async function beat(){await put('heartbeat/main',{at:Date.now(),from:'sito'});await SB.from('docs').select('id').eq('coll','heartbeat').range(0,0);}
@@ -1509,6 +1554,7 @@ $('#menu-btn').onclick=()=>{
     <div style="display:flex;gap:8px"><input id="m-name" placeholder="Come ti chiamo?" value="${esc(cfg().name)}" maxlength="30" aria-label="Il tuo nome"><button class="btn" id="m-name-ok" type="button">Salva nome</button></div>
     <button class="btn" id="m-notif" type="button">${ico('bell')}Notifiche giornaliere</button>
     <button class="btn" id="m-ios" type="button">${ico('play')}Siri e widget iPhone</button>
+    <button class="btn" id="m-sec" type="button">${ico('lock')}Sicurezza dell'account</button>
     <div class="note-box"><b>Database sveglio</b><br><span id="m-beat-t">${esc(beatText())}</span><br><span class="mini">Supabase gratuito va in pausa dopo una settimana senza attività: Capri manda un segnale ogni ora e ogni volta che lo apri.</span>
       <div style="margin-top:10px"><button class="btn sm" id="m-beat" type="button">${ico('refresh')}Manda un segnale adesso</button></div></div>
     <button class="btn" id="m-wake" type="button">${ico('logo')}<span>${'wakeLock' in navigator?(wakeWanted()?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)'):'Computer sempre sveglio: non supportato da questo browser'}</span></button>
@@ -1521,6 +1567,7 @@ $('#menu-btn').onclick=()=>{
   $('#m-name-ok').onclick=async()=>{const n=$('#m-name').value.trim();await put('config/main',{...cfg(),name:n});toast('Nome salvato','ok');renderOggi();};
   $('#m-notif').onclick=()=>{closeModal();notifModal();};
   $('#m-ios').onclick=()=>{closeModal();iphoneModal();};
+  $('#m-sec').onclick=()=>{closeModal();securityModal();};
   $('#m-beat').onclick=async()=>{const b=$('#m-beat');b.disabled=true;try{await beat();$('#m-beat-t').textContent=beatText();toast('Segnale inviato: Supabase resta attivo','ok');}catch(e){toast('Non riuscito: '+errMsg(e),'err');}b.disabled=false;};
   $('#m-wake').onclick=async()=>{if(!('wakeLock' in navigator)){toast('Questo browser non lo supporta: usa Chrome, Edge o Safari aggiornati','err');return;}
     const on=!wakeWanted();try{localStorage.setItem('capri-wake',on?'1':'0');}catch(e){}if(on)await wakeOn();else await wakeOff();
@@ -1566,7 +1613,7 @@ SUBS.diary=docs=>{S.diary=docs.map(d=>({...clone(d.data),id:d.id}));renderDiary(
 SUBS.note=docs=>{S.notes=docs.map(d=>({...clone(d.data),id:d.id}));renderNotes();renderOggi();};
 
 const gate=$('#gate');
-function gateShow(mode,msg){gate.hidden=false;$('#g-login').hidden=mode!=='login';$('#g-setup').hidden=mode!=='setup';$('#g-msg').textContent=msg||'';$('#g-msg').hidden=!msg;}
+function gateShow(mode,msg){gate.hidden=false;$('#g-login').hidden=mode!=='login';$('#g-mfa').hidden=mode!=='mfa';if(mode==='mfa')setTimeout(()=>$('#g-code').focus(),50);$('#g-setup').hidden=mode!=='setup';$('#g-msg').textContent=msg||'';$('#g-msg').hidden=!msg;}
 function getCfg(){
   const c=window.CAPRI_CONFIG||{};
   if(c.url&&c.key)return c;
@@ -1582,8 +1629,21 @@ $('#g-login').addEventListener('submit',async e=>{
   b.disabled=false;b.textContent='Entra';
   if(error){$('#g-err').textContent=/invalid/i.test(error.message)?'Email o password non corrette.':'Accesso non riuscito: '+error.message;return;}
   await authStorage.setItem('capri-login-at',String(Date.now()));
-  start(data.session);
+  proceed(data.session);
 });
+/* Verifica in due passaggi (TOTP): se l'account ha un'app di autenticazione collegata, serve anche il codice */
+async function mfaState(){try{const{data,error}=await SB.auth.mfa.getAuthenticatorAssuranceLevel();if(error)throw error;return data||{};}catch(e){return{};}}
+async function proceed(session){const a=await mfaState();if(a.nextLevel==='aal2'&&a.currentLevel!=='aal2'){gateShow('mfa','');return;}start(session);}
+async function totpFactor(){const{data,error}=await SB.auth.mfa.listFactors();if(error)throw error;return((data&&data.totp)||[]).find(f=>f.status==='verified')||null;}
+$('#g-mfa').addEventListener('submit',async e=>{
+  e.preventDefault();const b=$('#g-go3');b.disabled=true;b.textContent='Verifico…';$('#g-err3').textContent='';
+  try{const f=await totpFactor();if(!f)throw new Error('nessuna app collegata');
+    const{error}=await SB.auth.mfa.challengeAndVerify({factorId:f.id,code:$('#g-code').value.replace(/\s/g,'')});if(error)throw error;
+    const{data}=await SB.auth.getSession();$('#g-code').value='';start(data.session);}
+  catch(err){$('#g-err3').textContent=/invalid|expired|code/i.test(errMsg(err))?'Codice non valido o scaduto: riprova con quello nuovo.':'Verifica non riuscita: '+errMsg(err);}
+  b.disabled=false;b.textContent='Verifica';
+});
+$('#g-mfa-out').onclick=async()=>{try{await SB.auth.signOut();}catch(e){}await authStorage.removeItem('capri-login-at');location.reload();};
 async function start(session){
   UID=session.user.id;EMAIL=session.user.email||'';gate.hidden=true;setSync('Caricamento…','warn');
   try{await loadAll();syncState();}
@@ -1628,7 +1688,7 @@ async function boot(){
     const at=await loginAt();
     if(at&&Date.now()-at>LOGIN_TTL){try{await SB.auth.signOut();}catch(e){}gateShow('login','Sono passate 48 ore dall’ultimo accesso: entra di nuovo.');return;}
     if(!at)await authStorage.setItem('capri-login-at',String(Date.now()));
-    start(session);
+    proceed(session);
   }else gateShow('login','');
 }
 boot();
