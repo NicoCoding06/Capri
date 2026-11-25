@@ -2,6 +2,7 @@
 -- Accetta solo la chiave musica personale (la crea Capri: sezione Musica → Collega il PC).
 -- Può solo aggiornare lo stato del PC (indirizzo, numero di brani): non legge né modifica altri dati.
 -- Con più dispositivi (PC, tablet) risponde il primo acceso; se smette di dare segnale, subentra l'altro.
+-- Restituisce anche l'elenco dei brani eliminati da Capri, che ogni dispositivo sposta nel suo cestino.
 -- Incolla tutto nel SQL Editor di Supabase e premi Run. Si può rieseguire senza danni.
 
 grant usage on schema public to anon;
@@ -17,6 +18,7 @@ declare
   v_cur jsonb;
   v_now bigint := (extract(epoch from clock_timestamp()) * 1000)::bigint;
   v_name text := coalesce(p_info->>'name', '');
+  v_del jsonb;
 begin
   if p_key is null or length(p_key) < 32 then
     raise exception 'chiave non valida';
@@ -31,11 +33,14 @@ begin
   if p_url is not null and p_url !~ '^https://[a-z0-9-]+\.trycloudflare\.com$' then
     raise exception 'indirizzo non valido';
   end if;
+  select coalesce(jsonb_agg(k), '[]'::jsonb) into v_del
+    from public.docs d, jsonb_object_keys(coalesce(d.data->'ids', '{}'::jsonb)) k
+   where d.user_id = v_user and d.coll = 'music' and d.id = 'deleted' and jsonb_typeof(d.data->'ids') = 'object';
   select d.data into v_cur from public.docs d where d.user_id = v_user and d.coll = 'music' and d.id = 'host';
   if v_cur is not null and v_cur->>'url' is not null
      and coalesce(v_cur->'info'->>'name', '') is distinct from v_name
      and coalesce((v_cur->>'at')::bigint, 0) > v_now - 150000 then
-    return jsonb_build_object('ok', true, 'active', false, 'busy', v_cur->'info'->>'name');
+    return jsonb_build_object('ok', true, 'active', false, 'busy', v_cur->'info'->>'name', 'del', v_del);
   end if;
   insert into public.docs (user_id, coll, id, data, updated_at)
   values (v_user, 'music', 'host', jsonb_build_object(
@@ -43,7 +48,7 @@ begin
             'at', v_now,
             'info', coalesce(p_info, '{}'::jsonb) - 'url'), now())
   on conflict (user_id, coll, id) do update set data = excluded.data, updated_at = now();
-  return jsonb_build_object('ok', true, 'active', true);
+  return jsonb_build_object('ok', true, 'active', true, 'del', v_del);
 end;
 $$;
 

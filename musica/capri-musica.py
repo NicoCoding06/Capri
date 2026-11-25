@@ -21,7 +21,7 @@ SUPA_KEY = "__KEY__"
 MUSIC_KEY = "__MUSICKEY__"
 SITE = "__SITE__"
 
-VERSION = "1.0"
+VERSION = "1.1"
 EXTS = {".mp3", ".m4a", ".aac", ".flac", ".ogg", ".oga", ".opus", ".wav"}
 MIME = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".flac": "audio/flac", ".ogg": "audio/ogg",
         ".oga": "audio/ogg", ".opus": "audio/ogg", ".wav": "audio/wav"}
@@ -540,6 +540,109 @@ def check(what, q):
 # ------------------------------------------------------------------ server
 LIB = None
 SERVER_INFO = {"url": None}
+STOP = threading.Event()
+
+
+# ------------------------------------------------------------------ cestino (eliminazioni da Capri)
+TRASH_FILE = os.path.join(APP, "cestino.json")
+TRASH_DIR = ".capri-cestino"
+TRASH_DAYS = 30
+_trash_lock = threading.Lock()
+
+
+def _trash_load():
+    return load_json(TRASH_FILE, {})
+
+
+def _root_of(path):
+    for r in LIB.folders:
+        try:
+            if os.path.commonpath([os.path.abspath(path), r]) == r:
+                return r
+        except ValueError:
+            continue
+    return None
+
+
+def trash_track(i):
+    """Sposta il brano nel cestino nascosto della sua cartella (recuperabile per 30 giorni)."""
+    with _trash_lock:
+        path = LIB.paths.get(i)
+        if not path or not os.path.isfile(path):
+            return False
+        root = _root_of(path)
+        if not root:
+            return False
+        rel = os.path.relpath(path, root)
+        dest = os.path.join(root, TRASH_DIR, rel)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        if os.path.exists(dest):
+            b, e = os.path.splitext(dest)
+            dest = f"{b}.{int(time.time())}{e}"
+        shutil.move(path, dest)
+        idx = _trash_load()
+        idx[i] = {"orig": path, "trash": dest, "at": int(time.time())}
+        save_json(TRASH_FILE, idx)
+        with LIB.lock:
+            t = LIB.tracks.pop(i, None)
+            LIB.paths.pop(i, None)
+            LIB.at = int(time.time() * 1000)
+        log("🗑 Spostato nel cestino:", (t or {}).get("t") or os.path.basename(path))
+        return True
+
+
+def restore_track(i):
+    with _trash_lock:
+        idx = _trash_load()
+        e = idx.get(i)
+        if not e:
+            return False
+        ok = False
+        if os.path.isfile(e["trash"]) and not os.path.exists(e["orig"]):
+            os.makedirs(os.path.dirname(e["orig"]), exist_ok=True)
+            shutil.move(e["trash"], e["orig"])
+            ok = True
+            log("↩ Ripristinato:", os.path.basename(e["orig"]))
+        idx.pop(i, None)
+        save_json(TRASH_FILE, idx)
+    if ok:
+        threading.Thread(target=LIB.scan, daemon=True).start()
+    return ok
+
+
+def purge_trash():
+    with _trash_lock:
+        idx = _trash_load()
+        limit = time.time() - TRASH_DAYS * 86400
+        changed = False
+        for i, e in list(idx.items()):
+            if e.get("at", 0) < limit:
+                try:
+                    if os.path.isfile(e["trash"]):
+                        os.remove(e["trash"])
+                except OSError:
+                    pass
+                idx.pop(i, None)
+                changed = True
+        if changed:
+            save_json(TRASH_FILE, idx)
+
+
+def apply_remote_deletions(ids):
+    """Capri dice quali brani sono stati eliminati: li sposto nel cestino; quelli tolti dall'elenco tornano al loro posto."""
+    ids = set(ids or [])
+    for i in list(ids):
+        if i in LIB.paths:
+            try:
+                trash_track(i)
+            except Exception as e:
+                log("⚠ Non riesco a eliminare", i, e)
+    for i in list(_trash_load().keys()):
+        if i not in ids:
+            try:
+                restore_track(i)
+            except Exception as e:
+                log("⚠ Non riesco a ripristinare", i, e)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -588,6 +691,15 @@ class Handler(BaseHTTPRequestHandler):
         q = urllib.parse.parse_qs(u.query)
         parts = [x for x in u.path.split("/") if x]
         try:
+            if len(parts) == 2 and parts[0] in ("del", "restore", "quit") and re.match(r"^[0-9a-z]{1,16}$", parts[1]):
+                if not check(parts[0] + "." + parts[1], q):
+                    return self._send(403, b'{"error":"firma non valida"}')
+                if parts[0] == "quit":
+                    self._send(200, b'{"ok":true}')
+                    STOP.set()
+                    return
+                ok = trash_track(parts[1]) if parts[0] == "del" else restore_track(parts[1])
+                return self._send(200, json.dumps({"ok": ok, "at": LIB.at}).encode(), extra={"Cache-Control": "no-store"})
             if parts == ["ping"]:
                 ok = check("ping", q)
                 body = {"capri": True, "ok": ok}
@@ -694,6 +806,8 @@ def heartbeat(url):
             else:
                 log(f"In attesa: la musica la sta già servendo «{res.get('busy') or 'un altro dispositivo'}». Se si spegne, subentro io entro pochi minuti.")
         ACTIVE["v"] = act if url else None
+        if isinstance(res, dict) and isinstance(res.get("del"), list) and LIB:
+            apply_remote_deletions(res["del"])
         return True
     except urllib.error.HTTPError as e:
         msg = e.read().decode("utf-8", "replace")[:300]
@@ -951,15 +1065,28 @@ def main():
         return
     port = int(opt("--porta") or cfg["port"])
     # già in esecuzione?
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/ping", timeout=2) as r:
-            if json.loads(r.read()).get("capri"):
-                log("Capri Musica è già acceso su questo PC.")
-                if not QUIET:
-                    ask("Premi Invio per chiudere.")
-                return
-    except Exception:
-        pass
+    def running():
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/ping", timeout=2) as r:
+                return bool(json.loads(r.read()).get("capri"))
+        except Exception:
+            return False
+    if running():
+        if "--riavvia" in args:
+            e = int(time.time()) + 300
+            try:
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/quit/x?e={e}&s={sign('quit.x', e)}", timeout=5).read()
+            except Exception:
+                pass
+            for _ in range(20):
+                time.sleep(0.5)
+                if not running():
+                    break
+        if running():
+            log("Capri Musica è già acceso su questo dispositivo.")
+            if not QUIET:
+                ask("Premi Invio per chiudere.")
+            return
 
     if not QUIET:
         print("\n  ◉ CAPRI MUSICA", VERSION)
@@ -1003,13 +1130,15 @@ def main():
         tunnel.start()
 
     last_scan = time.time()
+    purge_trash()
     try:
-        while True:
-            time.sleep(5)
+        while not STOP.is_set():
+            STOP.wait(5)
             now = time.time()
             if now - last_scan > 600:
                 last_scan = now
                 LIB.scan()
+                purge_trash()
                 state["last"] = 0
             if state["url"] and now - state["last"] > 60:
                 if heartbeat(state["url"]):

@@ -1483,7 +1483,8 @@ const norm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''
 function muSig(what){const k=muKey();if(!k)return'';const e=Math.ceil(Date.now()/1000/21600)*21600+21600,ck=what+'.'+e;
   let q=MU.sigs.get(ck);if(!q){q=`e=${e}&s=${b64u(hmac256(k,ck).buffer).slice(0,32)}`;if(MU.sigs.size>4000)MU.sigs.clear();MU.sigs.set(ck,q);}return q;}
 function muUrl(kind,id){const h=muHost();if(!h||!h.url)return'';const q=muSig(id?kind+'.'+id:kind);return q?`${h.url}/${id?kind+'/'+id:kind}?${q}`:'';}
-function muSetLib(j){MU.lib=Array.isArray(j.tracks)?j.tracks:[];MU.libAt=j.at||0;MU.by={};const ac={};
+const muDeleted=()=>((muDoc('deleted')||{}).ids)||{};
+function muSetLib(j){const gone=muDeleted();MU.lib=(Array.isArray(j.tracks)?j.tracks:[]).filter(t=>!gone[t.i]);MU.libAt=j.at||0;MU.by={};const ac={};
   const ak=t=>(t.al||'')+'\u0001'+(t.aa||t.a||'').toLowerCase();
   for(const t of MU.lib){MU.by[t.i]=t;if(t.pic&&t.al&&!ac[ak(t)])ac[ak(t)]=t.i;}
   for(const t of MU.lib)t.cv=t.pic?t.i:(t.al&&ac[ak(t)])||'';}
@@ -1497,7 +1498,7 @@ async function muLoadLib(force){
   catch(e){MU.reach=false;MU.err=/fetch|network|load/i.test(errMsg(e))?'il PC non risponde':errMsg(e);}
   MU.loading=false;if(S.view==='musica')renderMusic();mUI();
 }
-SUBS.music=()=>{const h=muHost(),st=[muOnline(),h&&h.url,h&&h.info&&h.info.lib,muKey(),[...muLikes()].join()].join('|');
+SUBS.music=()=>{const h=muHost(),st=[muOnline(),h&&h.url,h&&h.info&&h.info.lib,muKey(),[...muLikes()].join(),Object.keys(muDeleted()).join()].join('|');
   if(st===MU.stKey){muStatus();return;}const hostChanged=!MU.stKey||MU.stKey.split('|')[1]!==String(h&&h.url);MU.stKey=st;
   if(hostChanged)MU.reach=null;muLoadLib();if(S.view==='musica')renderMusic();mUI();};
 SUBS.playlists=()=>{if(S.view==='musica')renderMusic();};
@@ -1550,6 +1551,9 @@ function renderMusic(){
   else if(sel&&sel.k==='artist'){const ar=muArtists(MU.lib).find(x=>x.a===sel.id);if(!ar){MU.sel=null;return renderMusic();}
     const als=muAlbums(ar.tr);
     html=head(ar.cv,'Artista',ar.a,`${tot(ar.tr)} · ${als.length} ${plural(als.length,'album','album')}`,ar.tr.map(t=>t.i),ar.a)+(als.length>1?`<div class="mu-grid" style="margin-bottom:18px">${als.map(a=>albumCard(a,A)).join('')}</div>`:'')+rows(ar.tr,'sel');}
+  else if(sel&&sel.k==='trash'){const del=muDeleted(),ids=Object.keys(del).sort((a,b)=>(del[b].at||0)-(del[a].at||0));
+    html=`<button class="btn ghost sm mu-back" data-ma="${A(()=>{MU.sel=null;renderMusic();})}">‹ Indietro</button><div class="mu-head"><div><p class="mini">Eliminati da Capri</p><h2>Cestino</h2><p>${ids.length} ${plural(ids.length,'brano','brani')} · dopo 30 giorni spariscono per sempre dai dispositivi</p></div></div>`+
+      (ids.length?`<div class="mu-list">${ids.map(i=>{const x=del[i];const left=Math.max(0,30-Math.floor((Date.now()-(x.at||0))/864e5));return `<div class="mr" style="cursor:default">${mcv('')}<span class="mt"><b>${esc(x.t||'Brano')}</b><span>${esc(x.a||'')}${x.al?' · '+esc(x.al):''}</span></span><span class="mal">${left?`ancora ${left} ${plural(left,'giorno','giorni')}`:'in eliminazione'}</span><span class="md2"></span><button class="btn sm ghost" style="grid-column:span 2" data-ma="${A(()=>muRestore(i))}">Ripristina</button></div>`;}).join('')}</div>`:'<div class="mu-empty">Il cestino è vuoto.</div>');}
   else if(sel&&sel.k==='pl'){const pl=sel.id==='likes'?{id:'likes',name:'Mi piace',ids:[...L].reverse()}:sel.id==='recent'?{id:'recent',name:'Ascoltati di recente',ids:mRecent()}:muPls().find(x=>x.id===sel.id);
     if(!pl){MU.sel=null;return renderMusic();}const tr=(pl.ids||[]).map(i=>MU.by[i]).filter(Boolean);
     const extra=pl.id!=='likes'&&pl.id!=='recent'?`<button class="btn ghost" data-ma="${A(()=>plRename(pl))}">Rinomina</button><button class="btn ghost danger" data-ma="${A(()=>plDelete(pl))}">Elimina</button>`:'';
@@ -1560,7 +1564,8 @@ function renderMusic(){
   else{const pls=muPls(),rec=mRecent();
     html=`<div class="mu-grid">${[{id:'likes',name:'Mi piace',ids:[...L]},...(rec.length?[{id:'recent',name:'Ascoltati di recente',ids:rec}]:[]),...pls].map(pl=>{const tr=(pl.ids||[]).map(i=>MU.by[i]).filter(Boolean);
       return `<button class="mu-card" data-ma="${A(()=>{MU.sel={k:'pl',id:pl.id};MU.limit=200;renderMusic();scrollTo(0,0);})}">${pl.id==='likes'?`<span class="mcv" style="background:linear-gradient(135deg,var(--cpp),#5b1bff);color:#fff">${ico('heart')}</span>`:mcv(cvId(tr))}<b>${esc(pl.name)}</b><span>${tr.length} ${plural(tr.length,'brano','brani')}</span></button>`;}).join('')}
-      <button class="mu-card" data-ma="${A(()=>plNew())}"><span class="mcv" style="background:var(--p2)">${ico('plus')}</span><b>Nuova playlist</b><span>Crea una raccolta</span></button></div>`;}
+      <button class="mu-card" data-ma="${A(()=>plNew())}"><span class="mcv" style="background:var(--p2)">${ico('plus')}</span><b>Nuova playlist</b><span>Crea una raccolta</span></button>
+      ${Object.keys(muDeleted()).length?`<button class="mu-card" data-ma="${A(()=>{MU.sel={k:'trash'};renderMusic();scrollTo(0,0);})}"><span class="mcv" style="background:var(--p2)">${ico('trash')}</span><b>Cestino</b><span>${Object.keys(muDeleted()).length} eliminati</span></button>`:''}</div>`;}
   body.innerHTML=html;muCovers(body);
 }
 function albumCard(a,A){const ids=a.tr.map(t=>t.i);return `<div class="mu-card" role="button" tabindex="0" data-ma="${A(()=>{MU.sel={k:'album',id:a.k};MU.limit=200;renderMusic();scrollTo(0,0);})}">${mcv(a.cv)}<b>${esc(a.al)}</b><span>${esc(a.a)}${a.y?' · '+esc(a.y):''}</span>${muOnline()?`<button class="mu-fab" type="button" aria-label="Riproduci ${esc(a.al)}" data-ma="${A(()=>{MU.shuffle=false;mPlayList(ids,0,a.al);})}"><svg><use href="#i-mplay"/></svg></button>`:''}</div>`;}
@@ -1581,13 +1586,36 @@ function muMore(id){const t=MU.by[id];if(!t)return;const sel=MU.sel,pl=sel&&sel.
   openModal(`<div class="mh"><h2 style="font-size:18px">${esc(t.t)}</h2><button class="x" data-close aria-label="Chiudi">×</button></div><p class="mini" style="margin:-8px 0 14px">${esc(t.a)}${t.al?' · '+esc(t.al):''}</p>
   <div class="mu-menu"><button data-m="next">${ico('mnext')}Riproduci dopo questo</button><button data-m="queue">${ico('queue')}Aggiungi in coda</button>
   ${muPls().map(p=>`<button data-pl="${esc(p.id)}">${ico('plus')}Aggiungi a “${esc(p.name)}”</button>`).join('')}<button data-m="newpl">${ico('plus')}Nuova playlist con questo brano</button>
-  ${pl?`<button data-m="rmpl">${ico('queue')}Togli da “${esc(pl.name)}”</button>`:''}${t.al?`<button data-m="album">${ico('music')}Vai all'album</button>`:''}<button data-m="artist">${ico('music')}Vai all'artista</button></div>`);
+  ${pl?`<button data-m="rmpl">${ico('queue')}Togli da “${esc(pl.name)}”</button>`:''}${t.al?`<button data-m="album">${ico('music')}Vai all'album</button>`:''}<button data-m="artist">${ico('music')}Vai all'artista</button>
+  <button data-m="del" class="mu-del">${ico('trash')}Elimina dal dispositivo</button></div>`);
   DLG.querySelector('.mu-menu').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const m=b.dataset.m;closeModal();
     if(b.dataset.pl){const p=muPls().find(x=>x.id===b.dataset.pl);if(p)plAdd(p,id);}
     else if(m==='next'||m==='queue'){if(MU.qi<0){mPlayList([id],0,'');return;}const at=m==='next'?MU.qi+1:MU.queue.length;MU.queue.splice(at,0,id);MU.orig.push(id);mSave();mUI();toast(m==='next'?'Suonerà dopo questo':'Aggiunto in coda','ok');}
+    else if(m==='del')muDelete(id);
     else if(m==='newpl')plNew(id);else if(m==='rmpl')plRemove(pl,id);
     else if(m==='album'){MU.sel={k:'album',id:(t.al||'(senza album)')+'\u0001'+(t.aa||t.a||'').toLowerCase()};MU.limit=200;location.hash='#musica';renderMusic();scrollTo(0,0);mClose();}
     else if(m==='artist'){MU.sel={k:'artist',id:t.a||'Artista sconosciuto'};MU.limit=200;location.hash='#musica';renderMusic();scrollTo(0,0);mClose();}});
+}
+/* ---------- eliminare brani (cestino di 30 giorni su ogni dispositivo) ---------- */
+async function muDelete(id){
+  const t=MU.by[id];if(!t)return;
+  if(!confirm(`Eliminare «${t.t}» di ${t.a}?\n\nVerrà tolto dalla cartella della musica su PC e tablet. Per 30 giorni lo puoi ripristinare da Musica → Playlist → Cestino.`))return;
+  const qi=MU.queue.indexOf(id);
+  if(qi>=0){const cur=qi===MU.qi;MU.queue.splice(qi,1);MU.orig=MU.orig.filter(x=>x!==id);if(qi<MU.qi)MU.qi--;
+    if(cur){AU.pause();AU.removeAttribute('src');try{AU.load();}catch(e){}if(MU.qi>=MU.queue.length)MU.qi=MU.queue.length-1;if(MU.queue.length&&MU.qi>=0)mLoad(true);}mSave();}
+  const del={...muDeleted()},lim=Date.now()-60*864e5;for(const k in del)if((del[k].at||0)<lim)delete del[k];
+  del[id]={at:Date.now(),t:t.t,a:t.a,al:t.al||''};
+  if(!await put('music/deleted',{ids:del}))return;
+  muSetLib({tracks:MU.lib,at:MU.libAt});renderMusic();mUI();
+  toast(`«${t.t}» eliminato`,'ok');
+  if(muOnline())fetch(muUrl('del',id),{cache:'no-store'}).catch(()=>{});
+}
+async function muRestore(id){
+  const del={...muDeleted()};const x=del[id];delete del[id];
+  if(!await put('music/deleted',{ids:del}))return;
+  toast(`«${(x&&x.t)||'Brano'}» ripristinato`,'ok');
+  if(muOnline())fetch(muUrl('restore',id),{cache:'no-store'}).then(()=>setTimeout(()=>muLoadLib(true),2500)).catch(()=>{});
+  renderMusic();
 }
 const mRecent=()=>{try{return JSON.parse(localStorage.getItem('capri-mrecent')||'[]');}catch(e){return[];}};
 function mPushRecent(id){try{const r=mRecent().filter(x=>x!==id);r.unshift(id);localStorage.setItem('capri-mrecent',JSON.stringify(r.slice(0,50)));}catch(e){}}

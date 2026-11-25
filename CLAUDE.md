@@ -26,7 +26,9 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
   `--cartella <Musica> --imposta-avvio --avvio`, scrivendo `installazione.txt` accanto a sé.
   Android: gira in Termux (cloudflared da `pkg`, wake lock, avvio con Termux:Boot); chiave e indirizzi passati con
   `--chiave --supabase --pk --sito` e salvati in config. Con più dispositivi `capri_music` tiene il primo attivo
-  (risponde `active:false, busy:<nome>` agli altri) finché non tace per 150 s.
+  (risponde `active:false, busy:<nome>` agli altri) finché non tace per 150 s. Restituisce anche `del` (brani eliminati da Capri):
+  ogni dispositivo li sposta in `<cartella>/.capri-cestino/` (indice `cestino.json`), li rimette a posto se tolti dall'elenco
+  e li cancella dopo 30 giorni. Endpoint firmati `del/<id>`, `restore/<id>`, `quit/x`; `--riavvia` chiude la versione già accesa.
   Il sito lo scarica con i segnaposto `__URL__`, `__KEY__`, `__MUSICKEY__`, `__SITE__` riempiti (sezione Musica → Collega il PC).
 - `setup.sql`: configurazione del database (tabella `docs`, permessi, archivio `allegati`, funzione `capri_api`).
 - `sicurezza.sql`: facoltativo, rende obbligatoria la verifica in due passaggi anche nel database (RLS restrictive su aal2).
@@ -38,7 +40,7 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
 Tabella unica `public.docs(user_id, coll, id, data jsonb)`, protetta da RLS.
 Collezioni: tickets, wishlist, sheets, config (doc `main`), spese, abbonamenti, note, diary,
 push, pushkeys (chiavi VAPID create dal telefono), pushstate, apitoken (chiave per widget e Siri),
-music (doc `key` chiave del PC, `host` {url, at, info}, `likes` {ids}), playlists {name, ids},
+music (doc `key` chiave del PC, `host` {url, at, info}, `likes` {ids}, `deleted` {ids:{id:{at,t,a,al}}}), playlists {name, ids},
 habits (abitudini: days 0=lun…6=dom, done {data:1}), calfeed (link privato calendario), calstate, heartbeat.
 Ticket: `rep` (g1, s1, s2, m1, m3, m6, a1) = si ripete; completandolo nasce il successivo (`repSpawned`).
 Diary: `rev {n,next,last}` per il ripasso dilazionato (logica in digest.js, condivisa).

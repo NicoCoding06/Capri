@@ -25,7 +25,10 @@ if exist "%USERPROFILE%\OneDrive\Music" (
   echo Brani in OneDrive\Music: >> "%LOG%"
   dir /s /b "%USERPROFILE%\OneDrive\Music\*.mp3" "%USERPROFILE%\OneDrive\Music\*.m4a" "%USERPROFILE%\OneDrive\Music\*.flac" 2>nul | find /c /v "" >> "%LOG%"
 )
-start "" "%PYW%" "%~dp0capri-musica.py" --cartella "%USERPROFILE%\Music" --imposta-avvio --avvio
+echo Chiudo un'eventuale versione precedente >> "%LOG%"
+powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name like 'python%%' and CommandLine like '%%capri-musica.py%%'\" | Invoke-CimMethod -MethodName Terminate | Out-Null" >> "%LOG%" 2>&1
+timeout /t 2 /nobreak >nul
+start "" "%PYW%" "%~dp0capri-musica.py" --cartella "%USERPROFILE%\Music" --imposta-avvio --riavvia --avvio
 echo Avviato con %PYW% >> "%LOG%"
 timeout /t 60 /nobreak >nul
 copy /y "%LOCALAPPDATA%\CapriMusica\registro.txt" "%~dp0registro-copia.txt" >nul 2>&1
