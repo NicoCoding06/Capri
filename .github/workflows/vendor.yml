@@ -33,7 +33,7 @@ jobs:
           mkdir -p vendor
           cp "$tmp/package/dist/umd/supabase.js" vendor/supabase.js
           echo "$V" > vendor/supabase.version
-          node -e "global.window=global;global.self=global;require('./vendor/supabase.js');if(typeof supabase.createClient!=='function')process.exit(1);console.log('createClient ok')"
+          node -e "const s=require('./vendor/supabase.js');if(typeof s.createClient!=='function')process.exit(1);console.log('createClient ok')"
       - name: Salva nel repository
         run: |
           git config user.name "capri-bot"
