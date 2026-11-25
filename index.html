@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-61Z0H66YDocApRVq4ZN3wCcdskb7CmYD+MLzsJiHElA=' 'sha256-ZY63t8t3jGXKvF6188K3a4poyUrE2oZz/r2lbvGUQi8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https://*.trycloudflare.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.scryfall.com https://*.trycloudflare.com; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-61Z0H66YDocApRVq4ZN3wCcdskb7CmYD+MLzsJiHElA=' 'sha256-nwl0vNpablzmgByLfUy43i53IHXCqi0Tpk0PGjA/aF8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https://*.trycloudflare.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.scryfall.com https://*.trycloudflare.com; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07060a">
@@ -2714,9 +2714,9 @@ function muStatus(){
   const h=muHost(),on=muOnline(),n=MU.lib.length,key=muKey();
   const sum=$('#mu-sum'),acts=$('#mu-acts');if(!sum)return;
   if(!key||!h){sum.innerHTML='Ascolta qui, anche dal telefono, le canzoni che hai sul PC.';
-    acts.innerHTML=`<button class="btn pri" data-ma="${MACT.push(muSetupModal)-1}">${ico('plus')}Collega il PC</button>`;return;}
-  if(on){sum.innerHTML=`<span class="mu-st on"><i></i>${esc((h.info&&h.info.name)||'PC')} acceso</span> · ${n.toLocaleString('it-IT')} ${plural(n,'brano','brani')}${MU.loading?' · aggiorno…':''}`;}
-  else sum.innerHTML=`<span class="mu-st"><i></i>PC spento o non raggiungibile</span>${h.at?' · ultimo segnale '+esc(ago(+h.at)):''}${MU.err&&h.url?' · '+esc(MU.err):''}${n?` · vedi la libreria, ma per ascoltare serve il PC acceso`:''}`;
+    acts.innerHTML=`<button class="btn pri" data-ma="${MACT.push(muSetupModal)-1}">${ico('plus')}Collega un dispositivo</button>`;return;}
+  if(on){sum.innerHTML=`<span class="mu-st on"><i></i>${esc((h.info&&h.info.name)||'Dispositivo')} acceso</span> · ${n.toLocaleString('it-IT')} ${plural(n,'brano','brani')}${MU.loading?' · aggiorno…':''}`;}
+  else sum.innerHTML=`<span class="mu-st"><i></i>Nessun dispositivo acceso</span>${h.at?` · ultimo segnale da ${esc((h.info&&h.info.name)||'dispositivo')} ${esc(ago(+h.at))}`:''}${MU.err&&h.url?' · '+esc(MU.err):''}${n?` · vedi la libreria, ma per ascoltare serve il tablet (o il PC) acceso con Capri Musica`:''}`;
   acts.innerHTML=`<div class="mu-acts">${on&&n?`<button class="btn pri" data-ma="${MACT.push(()=>mPlayList(muFilter(MU.lib).map(t=>t.i),0,'Tutti i brani'))-1}"><svg><use href="#i-mplay"/></svg>Riproduci</button><button class="btn" data-ma="${MACT.push(()=>{MU.shuffle=true;const ids=muFilter(MU.lib).map(t=>t.i);mPlayList(ids,Math.floor(Math.random()*ids.length),'Tutti i brani');})-1}"><svg><use href="#i-shuffle"/></svg>Casuale</button>`:`<button class="btn" data-ma="${MACT.push(()=>{MU.reach=null;muLoadLib(true);})-1}">${ico('refresh')}Riprova</button>`}
     <button class="btn ghost" data-ma="${MACT.push(muSetupModal)-1}" aria-label="Impostazioni del collegamento">${ico('menu')}</button></div>`;
 }
@@ -2725,9 +2725,9 @@ function renderMusic(){
   $$('#mu-tabs [data-mt]').forEach(b=>b.classList.toggle('on',b.dataset.mt===MU.tab));
   const body=$('#mu-body'),L=muLikes(),on=muOnline(),A=fn=>MACT.push(fn)-1;
   if(!MU.lib.length&&MU.tab!=='playlist'){
-    body.innerHTML=!muKey()||!muHost()?`<div class="mu-empty"><b>Collega il tuo PC</b>Un piccolo programma sul PC legge la cartella Musica e la fa ascoltare qui, anche fuori casa. Funziona quando il PC è acceso.<br><br><button class="btn pri" data-ma="${A(muSetupModal)}">Collega il PC</button></div>`
+    body.innerHTML=!muKey()||!muHost()?`<div class="mu-empty"><b>Collega il tuo PC</b>Un piccolo programma sul PC legge la cartella Musica e la fa ascoltare qui, anche fuori casa. Funziona quando il PC è acceso.<br><br><button class="btn pri" data-ma="${A(muSetupModal)}">Collega un dispositivo</button></div>`
       :on?`<div class="mu-empty"><b>${MU.loading?'Carico la libreria…':'Nessun brano trovato'}</b>${MU.loading?'':'Controlla la cartella scelta sul PC (mp3, m4a, flac, ogg, wav).'}</div>`
-      :`<div class="mu-empty"><b>Il PC è spento</b>Accendilo (o apri Capri Musica) e la libreria comparirà qui entro un minuto.</div>`;
+      :`<div class="mu-empty"><b>Nessun dispositivo acceso</b>Accendi il tablet con Capri Musica aperto in Termux: la libreria comparirà qui entro un minuto.</div>`;
     return;}
   const rows=(list,ctx,numbered)=>{MU.lists[ctx]=list.map(t=>t.i);const cur=MU.queue[MU.qi];const shown=list.slice(0,MU.limit);
     return `<div class="mu-list">${shown.map((t,i)=>`<div class="mr${t.i===cur?' cur':''}${on?'':' off'}" data-mr="${i}" data-ctx="${ctx}"><span class="mn">${t.i===cur&&!AU.paused?'♪':numbered&&t.n?t.n:i+1}</span>${mcv(t.cv)}<span class="mt"><b>${esc(t.t)}</b><span>${esc(t.a)}</span></span><span class="mal">${esc(t.al)}</span><span class="md2">${t.d?fmtDur(t.d):''}</span><button class="mi${L.has(t.i)?' liked':''}" data-like="${t.i}" aria-label="Mi piace"><svg><use href="#i-heart"/></svg></button><button class="mi" data-more="${t.i}" aria-label="Altro">⋯</button></div>`).join('')}</div>
@@ -2813,7 +2813,7 @@ function mPushRecent(id){try{const r=mRecent().filter(x=>x!==id);r.unshift(id);l
 /* ---------- riproduzione ---------- */
 function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function mPlayList(ids,start,from){
-  if(!ids.length)return;if(!muOnline()){toast('Il PC non è raggiungibile: accendilo o apri Capri Musica','err');return;}
+  if(!ids.length)return;if(!muOnline()){toast('Nessun dispositivo raggiungibile: accendi il tablet con Capri Musica','err');return;}
   MU.orig=ids.slice();MU.from=from||'';start=Math.max(0,Math.min(start||0,ids.length-1));
   if(MU.shuffle){const first=ids[start],rest=shuffleArr(ids.filter((_,j)=>j!==start));MU.queue=[first,...rest];MU.qi=0;}else{MU.queue=ids.slice();MU.qi=start;}
   MU.errs=0;mLoad(true);
@@ -2916,7 +2916,7 @@ setInterval(()=>{if(S.ready&&muHost())SUBS.music();},30000);
 async function muNewKey(){const b=crypto.getRandomValues(new Uint8Array(24));const k='mk_'+b64u(b.buffer);await put('music/key',{key:k,created:Date.now()});return k;}
 async function muSetupModal(){
   let key=muKey();
-  openModal(`<div class="mh"><h2>Collega il PC</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  openModal(`<div class="mh"><h2>Collega un dispositivo</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
   <p class="mini" style="margin:0 0 14px">Un piccolo programma sul PC legge la cartella della musica e la fa ascoltare qui, anche dal telefono fuori casa. Ogni brano passa da un collegamento cifrato e protetto dalla tua chiave personale.</p>
   <div class="ip">
     <div class="ip-step"><div class="ip-n">1</div><div><b>Attiva l'ingresso su Supabase (una volta sola)</b><p>Copia il codice, apri il <a href="${SUPA_SQL()}" target="_blank" rel="noopener">SQL Editor</a>, incollalo e premi <b>Run</b>.</p>
