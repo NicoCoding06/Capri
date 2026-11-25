@@ -1789,7 +1789,7 @@ async function muSetupModal(){
     set('SUPA_URL',C.url||'');set('SUPA_KEY',C.key||'');set('MUSIC_KEY',key);set('SITE',SITE_URL());
     if(/= "__[A-Z]+__"/.test(txt))throw new Error('modello del programma non riconosciuto');
     saveBlob('capri-musica.py',new Blob([txt],{type:'text/x-python'}));toast('Scaricato: aprilo sul PC','ok');}catch(e){toast('Errore: '+errMsg(e),'err');}b.disabled=false;};
-  DLG.querySelectorAll('[data-vl]').forEach(b=>b.onclick=async()=>{const u=SITE_URL()+'#casuale',l=b.dataset.vl==='webapp'?u.replace(/^https:\/\//,'webapp://'):u;
+  DLG.querySelectorAll('[data-vl]').forEach(b=>b.onclick=async()=>{const u=SITE_URL()+'?casuale#casuale',l=b.dataset.vl==='webapp'?u.replace(/^https:\/\//,'webapp://'):u;
     if(await copyText(l))toast('Link copiato: incollalo nell\'azione “Apri URL”','ok');else prompt('Copia questo link:',l);});
   $('#mu-android').onclick=async()=>{try{if(!key)key=await muNewKey();const C=getCfg()||{},q=v=>"'"+String(v).replace(/'/g,"'\\''")+"'";
     const cmd=`pkg install -y python cloudflared && termux-setup-storage; curl -fsSL ${q(SITE_URL()+'musica/capri-musica.py')} -o ~/capri-musica.py && python ~/capri-musica.py --chiave ${q(key)} --supabase ${q(C.url||'')} --pk ${q(C.key||'')} --sito ${q(SITE_URL())} --cartella ~/storage/shared --imposta-avvio`;
@@ -2096,7 +2096,8 @@ const VIEWS=['oggi','ticket','wishlist','finanze','diary','note','musica','calen
 const HALIAS={spese:['finanze','spese'],abbonamenti:['finanze','abb'],fogli:['finanze','fogli']};
 function route(){
   let hh=location.hash.slice(1);
-  if(hh==='casuale'||hh==='musica-casuale'){hh='musica';try{history.replaceState(null,'','#musica');}catch(e){}muAutoShuffle();}
+  const qs=/(^|[?&])casuale\b/.test(location.search);
+  if(hh==='casuale'||hh==='musica-casuale'||qs){hh='musica';try{history.replaceState(null,'',location.pathname+'#musica');}catch(e){}muAutoShuffle();}
   let v=hh;if(HALIAS[hh]){v=HALIAS[hh][0];S.fsub=HALIAS[hh][1];}
   if(!VIEWS.includes(v))v='oggi';
   if(S.ed&&!(v==='finanze'&&S.fsub==='fogli'))commitEdit(0,0,true);
@@ -2108,6 +2109,9 @@ function route(){
   scrollTo(0,0);
 }
 addEventListener('hashchange',route);
+/* iPhone: se il comando vocale riporta in primo piano l'app già aperta, ricontrolla l'indirizzo */
+const recheckCasuale=()=>{if(/casuale/.test(location.hash+location.search))route();};
+addEventListener('pageshow',recheckCasuale);document.addEventListener('visibilitychange',()=>{if(!document.hidden)recheckCasuale();});
 route();
 
 const finRefresh=()=>{if(S.view==='finanze'&&S.fsub!=='fogli')renderFin();};
