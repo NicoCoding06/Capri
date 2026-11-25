@@ -1,0 +1,42 @@
+# Scarica una copia locale della libreria Supabase dentro il sito (vendor/supabase.js),
+# così il sito non carica codice da siti esterni a ogni apertura.
+# Si avvia a mano (Actions → Aggiorna libreria Supabase → Run workflow) quando serve aggiornarla.
+name: Aggiorna libreria Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versione di @supabase/supabase-js (vuoto = ultima 2.x)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Scarica la libreria
+        run: |
+          set -e
+          V="${{ github.event.inputs.version }}"
+          [ -z "$V" ] && V=$(npm view @supabase/supabase-js@2 version | tail -1 | awk '{print $NF}' | tr -d "'")
+          echo "Versione: $V"
+          tmp=$(mktemp -d)
+          (cd "$tmp" && npm pack "@supabase/supabase-js@$V" --silent >/dev/null && tar xzf supabase-supabase-js-*.tgz)
+          mkdir -p vendor
+          cp "$tmp/package/dist/umd/supabase.js" vendor/supabase.js
+          echo "$V" > vendor/supabase.version
+          node -e "global.window=global;global.self=global;require('./vendor/supabase.js');if(typeof supabase.createClient!=='function')process.exit(1);console.log('createClient ok')"
+      - name: Salva nel repository
+        run: |
+          git config user.name "capri-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor
+          git diff --cached --quiet || (git commit -m "Libreria Supabase $(cat vendor/supabase.version) in copia locale" && git push)
