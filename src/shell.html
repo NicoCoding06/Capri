@@ -660,6 +660,7 @@ body.has-mp main{padding-bottom:110px}
 .mu-menu svg{width:18px;height:18px;color:var(--mu)}
 .ip-more{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--p1)}.ip-more summary{cursor:pointer;color:var(--mut);font-size:14px}.ip-more summary b{color:#fff}
 .mu-menu .mu-del{color:var(--u4)}.mu-menu .mu-del svg{color:var(--u4)}.mu-menu .mu-del:hover{border-color:var(--u4)}
+.mp-trash:hover{color:var(--u4)}
 </style>
 </head>
 <body data-v="oggi">
@@ -882,7 +883,7 @@ body.has-mp main{padding-bottom:110px}
     <button class="mp-b mp-desk" id="mp-rep" type="button" aria-label="Ripeti"><svg><use href="#i-repeat"/></svg></button>
   </div>
   <div class="mp-seek mp-desk"><span id="mp-cur">0:00</span><input type="range" id="mp-range" min="0" max="1000" value="0" aria-label="Posizione"><span id="mp-dur">0:00</span></div>
-  <div class="mp-side mp-desk"><button class="mp-b" id="mp-like" type="button" aria-label="Mi piace"><svg><use href="#i-heart"/></svg></button><button class="mp-b" id="mp-q" type="button" aria-label="In coda"><svg><use href="#i-queue"/></svg></button><svg class="mp-vi"><use href="#i-vol"/></svg><input type="range" id="mp-vol" min="0" max="100" value="100" aria-label="Volume"></div>
+  <div class="mp-side mp-desk"><button class="mp-b mp-trash" id="mp-del" type="button" aria-label="Elimina questa canzone" title="Elimina questa canzone"><svg><use href="#i-trash"/></svg></button><button class="mp-b" id="mp-like" type="button" aria-label="Mi piace"><svg><use href="#i-heart"/></svg></button><button class="mp-b" id="mp-q" type="button" aria-label="In coda"><svg><use href="#i-queue"/></svg></button><svg class="mp-vi"><use href="#i-vol"/></svg><input type="range" id="mp-vol" min="0" max="100" value="100" aria-label="Volume"></div>
 </div>
 <div id="mpf" hidden>
   <div class="mpf-bg" id="mpf-bg"></div>
@@ -892,7 +893,7 @@ body.has-mp main{padding-bottom:110px}
       <div class="mpf-cv" id="mpf-cv"></div>
       <div class="mpf-q" id="mpf-q" hidden></div>
     </div>
-    <div class="mpf-info"><div><b id="mpf-t"></b><span id="mpf-a"></span></div><button class="mp-b" id="mpf-like" type="button" aria-label="Mi piace"><svg><use href="#i-heart"/></svg></button></div>
+    <div class="mpf-info"><div><b id="mpf-t"></b><span id="mpf-a"></span></div><button class="mp-b mp-trash" id="mpf-del" type="button" aria-label="Elimina questa canzone"><svg><use href="#i-trash"/></svg></button><button class="mp-b" id="mpf-like" type="button" aria-label="Mi piace"><svg><use href="#i-heart"/></svg></button></div>
     <div class="mpf-seek"><input type="range" id="mpf-range" min="0" max="1000" value="0" aria-label="Posizione"><div><span id="mpf-cur">0:00</span><span id="mpf-dur">0:00</span></div></div>
     <div class="mpf-ctl">
       <button class="mp-b" id="mpf-shuf" type="button" aria-label="Casuale"><svg><use href="#i-shuffle"/></svg></button>

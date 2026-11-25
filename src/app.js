@@ -1708,6 +1708,7 @@ $('#mp-prev').onclick=$('#mpf-prev').onclick=()=>mPrev();
 $('#mp-shuf').onclick=$('#mpf-shuf').onclick=()=>mShuffle();
 $('#mp-rep').onclick=$('#mpf-rep').onclick=()=>mRepeat();
 $('#mp-like').onclick=$('#mpf-like').onclick=()=>{const id=MU.queue[MU.qi];if(id)muLike(id);};
+$('#mp-del').onclick=$('#mpf-del').onclick=()=>{const id=MU.queue[MU.qi];if(id)muDelete(id);};
 $('#mp-open').onclick=mOpen;$('#mpf-close').onclick=mClose;
 $('#mp-q').onclick=()=>{mOpen();$('#mpf-q').hidden=false;$('#mpf-cv').hidden=true;mQueue();};
 $('#mpf-qbtn').onclick=()=>{const q=$('#mpf-q');q.hidden=!q.hidden;$('#mpf-cv').hidden=!q.hidden;if(!q.hidden)mQueue();};
