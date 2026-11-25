@@ -91,8 +91,9 @@ async function heartbeat(uid) {
 // Calendario per l'iPhone: file .ics in un archivio pubblico, con un nome segreto e impossibile da indovinare.
 const BUCKET = 'calendario';
 async function storage(path, opt = {}) {
-  const h = { ...headers(), ...(opt.headers || {}) };
-  if (opt.raw) delete h['Content-Type'];
+  const base = headers();
+  if (opt.raw) delete base['Content-Type'];
+  const h = { ...base, ...(opt.headers || {}) };
   return fetch(BASE + '/storage/v1/' + path, { ...opt, headers: h });
 }
 async function putIcs(file, text) {
