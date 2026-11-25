@@ -871,6 +871,13 @@ def main():
                 time.sleep(0.05)
         except Exception:
             pass
+    if "--imposta-avvio" in args:
+        cfg["autostart"] = True
+        try:
+            set_autostart(True)
+            save_json(CFG_FILE, cfg)
+        except Exception as e:
+            log("Avvio automatico non impostato:", e)
     if "--togli-avvio" in args:
         set_autostart(False)
         print("Avvio automatico tolto.")

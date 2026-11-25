@@ -22,6 +22,8 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
 - `musica/capri-musica.py`: programma Python (solo libreria standard) per il PC: legge la cartella musica (tag ID3/FLAC/MP4/Vorbis,
   copertine), server su 127.0.0.1 con URL firmate HMAC (`a/<id>`, `c/<id>`, `library`, `ping`; firma = HMAC-SHA256(chiave, "cosa.scadenza")
   base64url 32 caratteri), tunnel `cloudflared` (trycloudflare.com) e segnale ogni minuto con `capri_music` (`musica/capri_music.sql`).
+  `musica/Avvia Capri Musica.bat`: trova (o installa con winget) Python e avvia il programma senza finestre con
+  `--cartella <Musica> --imposta-avvio --avvio`, scrivendo `installazione.txt` accanto a sé.
   Il sito lo scarica con i segnaposto `__URL__`, `__KEY__`, `__MUSICKEY__`, `__SITE__` riempiti (sezione Musica → Collega il PC).
 - `setup.sql`: configurazione del database (tabella `docs`, permessi, archivio `allegati`, funzione `capri_api`).
 - `sicurezza.sql`: facoltativo, rende obbligatoria la verifica in due passaggi anche nel database (RLS restrictive su aal2).
