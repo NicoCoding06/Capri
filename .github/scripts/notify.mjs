@@ -76,6 +76,15 @@ async function saveState(uid, data) {
     body: JSON.stringify({ user_id: uid, coll: 'pushstate', id: 'daily', data, updated_at: new Date().toISOString() }),
   });
 }
+// Segnale di vita: una piccola scrittura vera nel database a ogni giro, così Supabase vede attività
+// e non mette in pausa il progetto gratuito.
+async function heartbeat(uid) {
+  if (MOCK) { console.log('[mock] segnale di vita', uid); return; }
+  await rest('docs?on_conflict=user_id,coll,id', {
+    method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ user_id: uid, coll: 'heartbeat', id: 'main', data: { at: Date.now(), from: 'github' }, updated_at: new Date().toISOString() }),
+  });
+}
 async function dropSub(uid, id) {
   if (MOCK) { console.log('[mock] rimuovo iscrizione', id); return; }
   await rest(`docs?user_id=eq.${uid}&coll=eq.push&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
@@ -137,6 +146,9 @@ async function main() {
     sent += ok;
     if (!FORCE) await saveState(uid, { sent: sentMap, at: now.toISOString(), count: ok });
   }
+  let hb = 0;
+  for (const uid of users.keys()) { try { await heartbeat(uid); hb++; } catch (e) { console.log('::warning::Segnale di vita non riuscito: ' + e.message); } }
+  console.log(`Segnale di vita a Supabase: ${hb} ${hb === 1 ? 'utente' : 'utenti'}.`);
   console.log(`Fatto: ${sent} notifiche inviate (${today}, ore ${hour} a Roma, giorno ${dow}).`);
 }
 main().catch((e) => { console.error(e); process.exit(1); });

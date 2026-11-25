@@ -1436,6 +1436,13 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 setInterval(()=>{if(wakeWanted()&&document.visibilityState==='visible'&&!wakeActive())wakeOn();},30000);
 wakeOn();
 
+/* ================= SUPABASE SVEGLIO (contro la pausa del piano gratuito) ================= */
+const lastBeat=()=>{const d=CACHE.heartbeat&&CACHE.heartbeat.get('main');return d&&d.at?d:null;};
+async function beat(){await put('heartbeat/main',{at:Date.now(),from:'sito'});await SB.from('docs').select('id').eq('coll','heartbeat').range(0,0);}
+function beatText(){const h=lastBeat();if(!h)return'Nessun segnale ancora registrato.';const m=Math.round((Date.now()-h.at)/60000);
+  const t=m<1?'adesso':m<60?`${m} min fa`:m<1440?`${Math.round(m/60)} ${plural(Math.round(m/60),'ora','ore')} fa`:`${Math.round(m/1440)} ${plural(Math.round(m/1440),'giorno','giorni')} fa`;
+  return `Ultimo segnale ${t} (${h.from==='github'?'automatico, ogni ora':'da questo sito'}).`;}
+
 /* ================= RIEPILOGO SETTIMANALE (una volta sola) ================= */
 async function addWeekly(){
   const n=(S.cfg&&S.cfg.notify)||null;if(!S.cfg||(n&&n.weeklyAdded))return;
@@ -1491,7 +1498,7 @@ async function iphoneModal(){
 /* ================= MENU: backup, install, logout ================= */
 function backupData(){
   const out={app:'capri',version:1,exported:new Date().toISOString()};
-  for(const k in CACHE){if(/^(push|apitoken)/.test(k))continue;out[k]=[...CACHE[k].entries()].map(([id,data])=>({id,data}));}
+  for(const k in CACHE){if(/^(push|apitoken|heartbeat)/.test(k))continue;out[k]=[...CACHE[k].entries()].map(([id,data])=>({id,data}));}
   return out;
 }
 $('#menu-btn').onclick=()=>{
@@ -1502,6 +1509,8 @@ $('#menu-btn').onclick=()=>{
     <div style="display:flex;gap:8px"><input id="m-name" placeholder="Come ti chiamo?" value="${esc(cfg().name)}" maxlength="30" aria-label="Il tuo nome"><button class="btn" id="m-name-ok" type="button">Salva nome</button></div>
     <button class="btn" id="m-notif" type="button">${ico('bell')}Notifiche giornaliere</button>
     <button class="btn" id="m-ios" type="button">${ico('play')}Siri e widget iPhone</button>
+    <div class="note-box"><b>Database sveglio</b><br><span id="m-beat-t">${esc(beatText())}</span><br><span class="mini">Supabase gratuito va in pausa dopo una settimana senza attività: Capri manda un segnale ogni ora e ogni volta che lo apri.</span>
+      <div style="margin-top:10px"><button class="btn sm" id="m-beat" type="button">${ico('refresh')}Manda un segnale adesso</button></div></div>
     <button class="btn" id="m-wake" type="button">${ico('logo')}<span>${'wakeLock' in navigator?(wakeWanted()?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)'):'Computer sempre sveglio: non supportato da questo browser'}</span></button>
     <button class="btn" id="m-exp" type="button">Scarica backup completo (file .json)</button>
     <label class="btn" style="cursor:pointer"><input type="file" accept=".json,application/json" hidden id="m-imp">Ripristina da un backup</label>
@@ -1512,6 +1521,7 @@ $('#menu-btn').onclick=()=>{
   $('#m-name-ok').onclick=async()=>{const n=$('#m-name').value.trim();await put('config/main',{...cfg(),name:n});toast('Nome salvato','ok');renderOggi();};
   $('#m-notif').onclick=()=>{closeModal();notifModal();};
   $('#m-ios').onclick=()=>{closeModal();iphoneModal();};
+  $('#m-beat').onclick=async()=>{const b=$('#m-beat');b.disabled=true;try{await beat();$('#m-beat-t').textContent=beatText();toast('Segnale inviato: Supabase resta attivo','ok');}catch(e){toast('Non riuscito: '+errMsg(e),'err');}b.disabled=false;};
   $('#m-wake').onclick=async()=>{if(!('wakeLock' in navigator)){toast('Questo browser non lo supporta: usa Chrome, Edge o Safari aggiornati','err');return;}
     const on=!wakeWanted();try{localStorage.setItem('capri-wake',on?'1':'0');}catch(e){}if(on)await wakeOn();else await wakeOff();
     $('#m-wake span').textContent=on?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)';toast(on?(wakeActive()?'Il computer resterà sveglio finché Capri è aperto':'Attivo: parte appena Capri è in primo piano'):'Il computer può tornare in standby','ok');};
@@ -1581,6 +1591,7 @@ async function start(session){
   $('#errbar').hidden=true;
   S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();renderDiary();if(S.view==='finanze')renderFin();
   addWeekly().catch(()=>{});
+  {const h=lastBeat();if(!h||Date.now()-h.at>6*3600e3)beat().catch(()=>{});}
   try{SB.channel('docs-'+UID).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'user_id=eq.'+UID},onRealtime).subscribe();}catch(e){}
   let lastLoad=Date.now();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastLoad>20000&&!pendN&&!dirty.size&&!S.ed){lastLoad=Date.now();loadAll().catch(()=>{});}});
