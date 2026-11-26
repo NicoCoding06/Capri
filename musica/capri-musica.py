@@ -1019,6 +1019,8 @@ def main():
         SUPA_KEY = cfg["pk"]
     if SITE.startswith("__") and cfg.get("sito"):
         SITE = cfg["sito"]
+    if "--locale" in args:
+        SUPA_URL = ""  # Capri Server sul tablet: niente cloud, niente collegamento esterno
     if cfg.get("nome"):
         DEVICE["name"] = cfg["nome"]
     elif IS_TERMUX:
@@ -1137,7 +1139,7 @@ def main():
             state["last"] = time.time()
 
     tunnel = None
-    if "--senza-tunnel" in args:
+    if "--senza-tunnel" in args or "--locale" in args:
         on_url(opt("--url") or f"http://127.0.0.1:{port}")
     else:
         tunnel = Tunnel(port, on_url)

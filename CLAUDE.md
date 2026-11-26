@@ -40,6 +40,26 @@ Logo: microchip verde neon con una C (originale; niente marchi o personaggi prot
   Gli script contengono i segnaposto `__URL__`, `__KEY__`, `__TOKEN__`, `__SITE__`: li riempie il sito
   (menu ⋯ → Siri e widget iPhone) quando l'utente li copia. `capri_api` accetta solo il token salvato in `apitoken/main`.
 
+## Capri Server (tutto in locale, sul tablet)
+- `server/capri-server.mjs` (Node ≥18, nessuna dipendenza): stesso sito, ma dati in `~/capri-dati/capri.json` (scrittura atomica),
+  allegati in `~/capri-dati/allegati/<uid>/…`, sessione con cookie HttpOnly (30 giorni, il sito chiede comunque di rientrare dopo 48 ore).
+  API: `/api/login|logout|session|password`, `/api/docs` (GET, PUT/DELETE `/api/docs/<coll>/<id>`), `/api/events` (SSE nel formato realtime di Supabase),
+  `/api/files`, `/api/file/<path>`, `/api/files/delete`, `/api/stato`, `/api/backup`; `/rest/v1/rpc/capri_api` per Scriptable (stessa logica dell'SQL);
+  `/cal/<token>.ics`; `/musica-api/*` → programma musica su 127.0.0.1:47123 (avviato dal server con `--locale`, niente Cloudflare).
+  Ogni modifica (non GET) vuole l'intestazione `X-Capri: 1`. Notifiche push dal server (`server/webpush.mjs`, RFC 8291 + VAPID, senza npm),
+  copia di sicurezza ogni notte in `Documents/Capri backup` (14 giorni).
+- `capri-local.js`: imita la parte di Supabase usata dal sito. `config.js` servito dal server = `{local:true}` → in `app.js` `LOCAL` vale true:
+  niente Face ID/2FA (l'accesso è già limitato alla rete Tailscale), niente segnale per Supabase, testi locali per musica/Siri/calendario.
+  La grafica è la stessa: ogni differenza passa da `LOCAL`. La versione su GitHub Pages continua a funzionare con Supabase.
+- `server/installa-termux.sh`: installa/aggiorna su Termux (Node, Python, Tailscale in userspace, `tailscale serve` HTTPS sulla porta 8080,
+  import, avvio con Termux:Boot `~/.termux/boot/capri.sh`, comando `capri aggiorna|riavvia|log|password|pulisci`).
+- Trasloco: `--importa` copia da Supabase (login + TOTP) con stesso UID, stessi percorsi degli allegati e stessa password, verifica tutto,
+  fa una copia, scrive `config/main.migratedLocal {at,url,cal}` su Supabase e (se confermato) cancella il resto da Supabase.
+  Il vecchio sito mostra un avviso col nuovo indirizzo; `notify.mjs` salta gli utenti trasferiti e toglie il loro calendario pubblico.
+  `capri pulisci` cancella da Supabase solo se ogni elemento là esiste anche sul tablet. Per provarlo: `CAPRI_SUPABASE_URL=<finto>`.
+- Prova locale: `CAPRI_PASSWORD=… node server/capri-server.mjs --dati /tmp/d --password --email x@y.z`, poi
+  `node server/capri-server.mjs --dati /tmp/d --porta 8099 --musica <cartella>` e apri http://localhost:8099.
+
 ## Dati
 Tabella unica `public.docs(user_id, coll, id, data jsonb)`, protetta da RLS.
 Collezioni: tickets, wishlist, sheets, config (doc `main`), spese, abbonamenti, note, diary,

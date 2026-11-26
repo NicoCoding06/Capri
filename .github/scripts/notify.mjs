@@ -119,6 +119,20 @@ async function dropIcs(files) {
 async function publishCalendars(users, today) {
   let n = 0;
   for (const [uid, u] of users) {
+    const mig = (u.config.main || {}).migratedLocal;
+    if (mig) {
+      // trasferito sul tablet: il calendario nel cloud (pubblico) va tolto, non più aggiornato
+      const files = [...(mig.cal || []), ...(u.calfeed.main ? [u.calfeed.main.token, ...(u.calfeed.main.prev || [])] : [])].filter((x) => /^[\w-]{20,}$/.test(String(x || ''))).map((x) => x + '.ics');
+      if (files.length && !mig.calDropped && !MOCK) {
+        try {
+          await dropIcs(files);
+          await rest('docs?on_conflict=user_id,coll,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify({ user_id: uid, coll: 'config', id: 'main', data: { ...u.config.main, migratedLocal: { ...mig, calDropped: Date.now() } }, updated_at: new Date().toISOString() }) });
+          console.log('Calendario nel cloud tolto (dati trasferiti sul tablet).');
+        } catch (e) { console.log('::warning::Pulizia calendario: ' + e.message); }
+      }
+      continue;
+    }
     const f = u.calfeed.main;
     if (!f || !f.token || String(f.token).length < 32 || !/^[\w-]+$/.test(f.token)) continue;
     const file = f.token + '.ics';
@@ -173,6 +187,7 @@ async function main() {
     const keys = u.pushkeys.vapid;
     if (!u.push.length || !keys || !keys.publicKey || !keys.privateKey) continue;
     const conf = u.config.main || {};
+    if (conf.migratedLocal && !FORCE) continue; // ora le manda Capri Server dal tablet: niente doppioni
     const notify = { on: true, ...(conf.notify || {}) };
     if (notify.on === false && !FORCE) continue;
     const state = u.pushstate.daily || {};
@@ -213,10 +228,16 @@ async function main() {
     if (!FORCE) await saveState(uid, { sent: sentMap, at: now.toISOString(), count: ok });
   }
   let hb = 0;
-  for (const uid of users.keys()) { try { await heartbeat(uid); hb++; } catch (e) { console.log('::warning::Segnale di vita non riuscito: ' + e.message); } }
+  for (const [uid, u] of users) { if ((u.config.main || {}).migratedLocal) continue; try { await heartbeat(uid); hb++; } catch (e) { console.log('::warning::Segnale di vita non riuscito: ' + e.message); } }
   console.log(`Segnale di vita a Supabase: ${hb} ${hb === 1 ? 'utente' : 'utenti'}.`);
   if (CALTEST && !MOCK) await calTest(today);
   await publishCalendars(users, today);
   console.log(`Fatto: ${sent} notifiche inviate (${today}, ore ${hour} a Roma, giorno ${dow}).`);
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  if (/fetch failed|ENOTFOUND|EAI_AGAIN|Supabase (404|5\d\d)/.test(String(e && (e.message + ' ' + (e.cause && e.cause.code))))) {
+    console.log('::notice::Supabase non risponde (progetto in pausa o eliminato dopo il trasferimento sul tablet): niente da fare. ' + e.message);
+    return;
+  }
+  console.error(e); process.exit(1);
+});

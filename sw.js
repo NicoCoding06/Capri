@@ -1,8 +1,8 @@
 /* Capri: service worker.
    - Notifiche push.
    - Apertura anche senza rete: il sito si scarica sempre aggiornato (rete prima) e,
-     se la connessione manca, si apre l'ultima versione salvata. I dati restano su Supabase. */
-var CACHE = 'capri-shell-v1';
+     se la connessione manca, si apre l'ultima versione salvata. I dati non vengono mai salvati qui. */
+var CACHE = 'capri-shell-v2';
 
 self.addEventListener('install', function () { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
@@ -18,6 +18,8 @@ self.addEventListener('fetch', function (e) {
   var same = u.origin === self.location.origin;
   var cdn = u.hostname === 'cdn.jsdelivr.net';
   if (!same && !cdn) return;
+  // Capri Server: dati, allegati, musica e aggiornamenti in tempo reale non passano mai dalla cache
+  if (same && /^\/(api|musica-api|cal|rest)\//.test(u.pathname)) return;
   e.respondWith(fetch(r).then(function (res) {
     if (res && (res.ok || res.type === 'opaque')) {
       var copy = res.clone();

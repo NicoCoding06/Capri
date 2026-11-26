@@ -52,6 +52,7 @@ const errMsg=e=>(e&&(e.message||e.error_description||e.code))||'errore';
 
 /* ---------- storage (Supabase) ---------- */
 let SB=null,UID=null,EMAIL='';
+const LOCAL=!!(window.CAPRI_CONFIG&&window.CAPRI_CONFIG.local); /* Capri Server sul tuo dispositivo */
 const CACHE={tickets:new Map(),wishlist:new Map(),sheets:new Map(),config:new Map(),spese:new Map(),abbonamenti:new Map(),note:new Map(),diary:new Map(),push:new Map(),pushkeys:new Map(),pushstate:new Map()};
 const SUBS={};
 const wq={},pend={};let pendN=0;
@@ -160,7 +161,7 @@ function catManager(key){
     list=list.map(c=>{const o={n:c.n.trim(),c:c.c};if(sc){const b=numIn(c.b);if(b)o.b=Math.abs(b);}return o;}).filter(c=>c.n);
     const names=new Set();for(const c of list){if(names.has(c.n)){toast('Due categorie hanno lo stesso nome','err');return;}names.add(c.n);}
     const ren={};orig.forEach((o,i)=>{if(o&&list[i]&&list[i].n!==o)ren[o]=list[i].n;});
-    const next={...cfg(),[key]:list};if(sc){const t=numIn($('#cm-tot').value);next.sbudget=t?Math.abs(t):null;}closeModal();
+    const next={...(S.cfg||{}),...cfg(),[key]:list};if(sc){const t=numIn($('#cm-tot').value);next.sbudget=t?Math.abs(t):null;}closeModal();
     await put('config/main',next);
     const targets=key==='tcats'?[['tickets',S.tickets]]:key==='wcats'?[['wishlist',S.wish]]:key==='dcats'?[['diary',S.diary]]:[['spese',S.spese],['abbonamenti',S.abb]];
     for(const[coll,arr]of targets)for(const it of arr){if(ren[it.cat]){const b=body(it);b.cat=ren[it.cat];await put(coll+'/'+it.id,b);}}
@@ -1748,7 +1749,32 @@ function muTapToPlay(){
 
 /* ---------- collegare il PC ---------- */
 async function muNewKey(){const b=crypto.getRandomValues(new Uint8Array(24));const k='mk_'+b64u(b.buffer);await put('music/key',{key:k,created:Date.now()});return k;}
+const muVoiceHtml=()=>`  <details class="ip-more" style="margin-top:14px" open><summary><b>Comando vocale: “Ehi Siri, Musica Capri”</b> apre Capri e fa partire la musica in casuale.</summary>
+    <div class="ip" style="margin-top:12px">
+      <div class="ip-step"><div class="ip-n">1</div><div><b>Copia il link</b><p>Usa il primo se Capri è sulla schermata Home come app (consigliato), il secondo per aprirlo in Safari.</p>
+        <div class="ip-b"><button class="btn sm pri" type="button" data-vl="webapp">Link per l'app sulla Home</button><button class="btn sm ghost" type="button" data-vl="https">Link per Safari</button></div></div></div>
+      <div class="ip-step"><div class="ip-n">2</div><div><b>Crea il comando</b><p>App <b>Comandi</b> → <b>+</b> → cerca l'azione <b>Apri URL</b> e incolla il link. In alto rinomina il comando <b>Musica Capri</b> e tocca Fine.</p></div></div>
+      <div class="ip-step"><div class="ip-n">3</div><div><b>Usalo</b><p>Di' <b>“Ehi Siri, Musica Capri”</b> (o tocca il comando). Capri si apre e parte la musica in casuale; se l'iPhone chiede un tocco per l'audio, compare un grande ▶: basta toccare lo schermo.</p></div></div>
+    </div>
+  </details>`;
+function muVoiceWire(){DLG.querySelectorAll('[data-vl]').forEach(b=>b.onclick=async()=>{const u=SITE_URL()+'?casuale#casuale',l=b.dataset.vl==='webapp'?u.replace(/^https:\/\//,'webapp://'):u;
+    if(await copyText(l))toast('Link copiato: incollalo nell\'azione “Apri URL”','ok');else prompt('Copia questo link:',l);});}
+async function muLocalModal(){
+  openModal(`<div class="mh"><h2>La tua musica</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
+  <p class="mini" style="margin:0 0 14px">La musica arriva dal dispositivo dove gira Capri, attraverso la tua rete privata Tailscale: niente cloud e niente collegamenti pubblici.</p>
+  <div class="ip">
+    <div class="ip-step"><div class="ip-n">✓</div><div><b>Stato</b><p id="mu-lst">${muOnline()?'✅ Collegata.':'Controllo…'}</p></div></div>
+    <div class="ip-step"><div class="ip-n">♪</div><div><b>Aggiungere canzoni</b><p>Copiale in qualsiasi cartella del tablet (Music, Download, File audio…): Capri le trova da solo entro qualche minuto e salta chat, registrazioni e suonerie.</p></div></div>
+  </div>
+  ${muVoiceHtml()}
+  <div class="mf"><span class="sp"></span><button class="btn pri" type="button" data-close>Chiudi</button></div>`,{wide:true});
+  muVoiceWire();
+  try{const j=await (await fetch('api/stato',{cache:'no-store'})).json();const el=$('#mu-lst');const h=muHost()||{},n=h.info&&h.info.tracks;
+    if(el)el.innerHTML=j.musica?`✅ Collegata${n?': '+n+' brani':''}. Cartella: <code>${esc(j.cartellaMusica)}</code>`:`⚠ Il programma della musica non risponde. Cartella: <code>${esc(j.cartellaMusica)}</code>. Riavvia Capri sul tablet; se non basta, controlla che Termux abbia il permesso per i file.`;}
+  catch(e){const el=$('#mu-lst');if(el)el.textContent='Non riesco a leggere lo stato: '+errMsg(e);}
+}
 async function muSetupModal(){
+  if(LOCAL)return muLocalModal();
   let key=muKey();
   openModal(`<div class="mh"><h2>Collega un dispositivo</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
   <p class="mini" style="margin:0 0 14px">Un piccolo programma sul PC legge la cartella della musica e la fa ascoltare qui, anche dal telefono fuori casa. Ogni brano passa da un collegamento cifrato e protetto dalla tua chiave personale.</p>
@@ -1789,8 +1815,7 @@ async function muSetupModal(){
     set('SUPA_URL',C.url||'');set('SUPA_KEY',C.key||'');set('MUSIC_KEY',key);set('SITE',SITE_URL());
     if(/= "__[A-Z]+__"/.test(txt))throw new Error('modello del programma non riconosciuto');
     saveBlob('capri-musica.py',new Blob([txt],{type:'text/x-python'}));toast('Scaricato: aprilo sul PC','ok');}catch(e){toast('Errore: '+errMsg(e),'err');}b.disabled=false;};
-  DLG.querySelectorAll('[data-vl]').forEach(b=>b.onclick=async()=>{const u=SITE_URL()+'?casuale#casuale',l=b.dataset.vl==='webapp'?u.replace(/^https:\/\//,'webapp://'):u;
-    if(await copyText(l))toast('Link copiato: incollalo nell\'azione “Apri URL”','ok');else prompt('Copia questo link:',l);});
+  muVoiceWire();
   $('#mu-android').onclick=async()=>{try{if(!key)key=await muNewKey();const C=getCfg()||{},q=v=>"'"+String(v).replace(/'/g,"'\\''")+"'";
     const cmd=`pkg install -y python cloudflared && termux-setup-storage; curl -fsSL ${q(SITE_URL()+'musica/capri-musica.py')} -o ~/capri-musica.py && python ~/capri-musica.py --chiave ${q(key)} --supabase ${q(C.url||'')} --pk ${q(C.key||'')} --sito ${q(SITE_URL())} --cartella ~/storage/shared --imposta-avvio`;
     if(await copyText(cmd))toast('Comando copiato: incollalo in Termux sul tablet','ok');else{prompt('Copia questo comando:',cmd);}}catch(e){toast('Errore: '+errMsg(e),'err');}};
@@ -1841,7 +1866,7 @@ function renderCal(){
     ${sd>=t?`<button class="btn sm ghost" style="margin-top:12px;width:100%" data-ca="${A(()=>{ticketModal(null);setTimeout(()=>{const i=$('#tf [name=due]');if(i)i.value=sd;},30);})}">${ico('plus')}Ticket con scadenza in questo giorno</button>`:''}`;
   renderCalSync();
 }
-function calFeedUrl(){const f=CACHE.calfeed&&CACHE.calfeed.get('main');const C=getCfg()||{};return f&&f.token&&C.url?`${C.url}/storage/v1/object/public/calendario/${f.token}.ics`:'';}
+function calFeedUrl(){const f=CACHE.calfeed&&CACHE.calfeed.get('main');const C=getCfg()||{};return f&&f.token?(LOCAL?`${location.origin}/cal/${f.token}.ics`:C.url?`${C.url}/storage/v1/object/public/calendario/${f.token}.ics`:''):'';}
 function renderCalSync(){
   const el=$('#c-sync');if(!el)return;const url=calFeedUrl(),st=CACHE.calstate&&CACHE.calstate.get('main');
   const ready=st&&st.at&&url&&st.file===url.split('/').pop();
@@ -1930,15 +1955,16 @@ async function reviewDone(x,ok){
 /* ================= SICUREZZA DELL'ACCOUNT ================= */
 async function securityModal(){
   const at=await loginAt();const until=at?new Date(at+LOGIN_TTL):null;
-  let f=null,mfaErr='';try{f=await totpFactor();}catch(e){mfaErr=errMsg(e);}
+  let f=null,mfaErr='';if(!LOCAL)try{f=await totpFactor();}catch(e){mfaErr=errMsg(e);}
   openModal(`<div class="mh"><h2>Sicurezza</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
   <div class="sec">
-    <div class="sec-row"><div><b>Verifica in due passaggi</b><p class="mini">${f?'✅ Attiva: per entrare servono password e codice dell\'app di autenticazione.':'Oltre alla password, chiede un codice di 6 cifre da un\'app come Google Authenticator, Authy o Password di iPhone.'}${mfaErr?' ('+esc(mfaErr)+')':''}</p></div>
+    ${LOCAL?`<div class="sec-row"><div><b>Accesso solo dai tuoi dispositivi</b><p class="mini">Capri è sul tuo dispositivo e si raggiunge soltanto dalla tua rete privata Tailscale: un estraneo non vede nemmeno la pagina di accesso. In più serve la tua password.</p></div></div>`:`    <div class="sec-row"><div><b>Verifica in due passaggi</b><p class="mini">${f?'✅ Attiva: per entrare servono password e codice dell\'app di autenticazione.':'Oltre alla password, chiede un codice di 6 cifre da un\'app come Google Authenticator, Authy o Password di iPhone.'}${mfaErr?' ('+esc(mfaErr)+')':''}</p></div>
       ${f?'<button class="btn sm danger" id="sc-mfa-off" type="button">Disattiva</button>':'<button class="btn sm pri" id="sc-mfa-on" type="button">Attiva</button>'}</div>
     <div id="sc-enroll"></div>
     ${f?`<div class="sec-row"><div><b>Rendila obbligatoria anche per il database</b><p class="mini">Senza il codice, il database rifiuta ogni richiesta, anche fuori dal sito. Copia il codice, incollalo nel <a href="${SUPA_SQL()}" target="_blank" rel="noopener">SQL Editor di Supabase</a> e premi Run. Widget, Siri e notifiche continuano a funzionare.</p></div><button class="btn sm" data-sqlcp type="button">Copia SQL</button></div>`:''}
     <div class="sec-row"><div style="flex:1"><b>Face ID / impronta</b><p class="mini">Entri con il volto o l'impronta invece della password. La chiave resta nel portachiavi del dispositivo (con iCloud vale anche sugli altri tuoi dispositivi Apple).</p><div class="pk-list" id="sc-pk-list"></div></div>
       <button class="btn sm pri" id="sc-pk-add" type="button"${pkSupported()?'':' disabled title="Questo browser non lo supporta"'}>Aggiungi questo dispositivo</button></div>
+`}
     <form class="sec-row" id="sc-pw"><div style="flex:1"><b>Cambia password</b><p class="mini">Almeno 10 caratteri. Meglio una frase lunga.</p>
       <div class="sec-pw"><input type="password" id="sc-p1" autocomplete="new-password" placeholder="Nuova password" minlength="10" required><input type="password" id="sc-p2" autocomplete="new-password" placeholder="Ripetila" minlength="10" required></div></div>
       <button class="btn sm" type="submit">Salva</button></form>
@@ -1949,9 +1975,9 @@ async function securityModal(){
       el.innerHTML=l.length?l.map(k=>`<div>🔑<span><b>${esc(k.friendly_name||'Passkey')}</b><br><span class="mini">aggiunta il ${fmtDate(k.created_at)}${k.last_used_at?` · usata ${esc(ago(Date.parse(k.last_used_at)))}`:''}</span></span><button class="btn sm ghost" type="button" data-pkdel="${esc(k.id)}">Rimuovi</button></div>`).join(''):'<p class="mini" style="margin:0">Nessun dispositivo collegato.</p>';}
     catch(e){el.innerHTML=`<p class="mini" style="margin:0">${esc(pkErr(e)||errMsg(e))}</p>`;}};
   drawPk();
-  $('#sc-pk-list').addEventListener('click',async e=>{const b=e.target.closest('[data-pkdel]');if(!b||!armed(b,'Conferma'))return;
+  if($('#sc-pk-list'))$('#sc-pk-list').addEventListener('click',async e=>{const b=e.target.closest('[data-pkdel]');if(!b||!armed(b,'Conferma'))return;
     const{error}=await SB.auth.passkey.delete({passkeyId:b.dataset.pkdel});if(error){toast('Non riuscito: '+errMsg(error),'err');return;}toast('Dispositivo rimosso','ok');drawPk();});
-  $('#sc-pk-add').onclick=async()=>{const b=$('#sc-pk-add');b.disabled=true;
+  if($('#sc-pk-add'))$('#sc-pk-add').onclick=async()=>{const b=$('#sc-pk-add');b.disabled=true;
     try{const{data,error}=await SB.auth.registerPasskey();if(error)throw error;
       const id=data&&(data.id||(data.passkey&&data.passkey.id));if(id)try{await SB.auth.passkey.update({passkeyId:id,friendlyName:pkName()+' · '+new Date().toLocaleDateString('it-IT')});}catch(e){}
       try{localStorage.setItem('capri-passkey','1');}catch(e){}toast('Fatto: la prossima volta entri con Face ID','ok');drawPk();}
@@ -2024,8 +2050,8 @@ async function iphoneModal(){
   openModal(`<div class="mh"><h2>Siri e widget iPhone</h2><button class="x" data-close aria-label="Chiudi">×</button></div>
   <p class="mini" style="margin:0 0 14px">Con l'app gratuita Scriptable vedi ticket urgenti e spese sulla schermata Home o di blocco, e aggiungi cose a voce: “Ehi Siri, Capri” → “spesa 12,50 pizza”.</p>
   <div class="ip">
-  ${step(1,'Attiva l\'ingresso per l\'iPhone (una volta sola)',`<p>Copia il codice, apri il <a href="${SUPA_SQL()}" target="_blank" rel="noopener">SQL Editor di Supabase</a>, incollalo e premi <b>Run</b>.</p>
-    <div class="ip-b"><button class="btn sm" type="button" data-cp="capri_api.sql">Copia codice SQL</button><button class="btn sm ghost" type="button" id="ip-check">Verifica collegamento</button></div><p class="mini" id="ip-res"></p>`)}
+  ${step(1,LOCAL?'Tieni acceso Tailscale sull\'iPhone':'Attiva l\'ingresso per l\'iPhone (una volta sola)',(LOCAL?`<p>Widget e Siri parlano direttamente con il tuo dispositivo: funzionano quando sull'iPhone è attiva l'app Tailscale (anche fuori casa).</p>`:`<p>Copia il codice, apri il <a href="${SUPA_SQL()}" target="_blank" rel="noopener">SQL Editor di Supabase</a>, incollalo e premi <b>Run</b>.</p>`)+`
+    <div class="ip-b">${LOCAL?'':'<button class="btn sm" type="button" data-cp="capri_api.sql">Copia codice SQL</button>'}<button class="btn sm ghost" type="button" id="ip-check">Verifica collegamento</button></div><p class="mini" id="ip-res"></p>`)}
   ${step(2,'Installa Scriptable e incolla i due script',`<p>Scarica <a href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Scriptable</a>. Per ogni script: tocca <b>+</b>, incolla, poi tocca il titolo in alto e chiamalo come indicato.</p>
     <div class="ip-b"><button class="btn sm" type="button" data-cp="capri-widget.js">Copia script “Capri Widget”</button><button class="btn sm" type="button" data-cp="capri-aggiungi.js">Copia script “Capri Aggiungi”</button></div>`)}
   ${step(3,'Aggiungi il widget',`<p><b>Home:</b> tieni premuto su uno spazio vuoto → <b>Modifica</b> → <b>Aggiungi widget</b> → Scriptable → scegli la misura → tocca il widget → Script: <b>Capri Widget</b>.<br><b>Schermata di blocco:</b> tienila premuta → <b>Personalizza</b> → Schermata di blocco → tocca l'area dei widget → Scriptable → poi scegli <b>Capri Widget</b> allo stesso modo.</p>`)}
@@ -2042,7 +2068,7 @@ async function iphoneModal(){
   $('#ip-check').onclick=async()=>{const r=$('#ip-res');r.textContent='Verifico…';
     try{const {data,error}=await SB.rpc('capri_api',{p_token:apiToken(),p_action:'riepilogo'});if(error)throw error;
       r.innerHTML=`✅ Funziona: ${(data.tickets||[]).length} ticket aperti, ${(data.spese||[]).length} spese questo mese.`;}
-    catch(e){const m=errMsg(e);r.textContent=/capri_api|PGRST202|function|schema cache/i.test(m+(e&&e.code))?'Non ancora attivo: esegui prima il codice SQL su Supabase.':'Non funziona: '+m;}};
+    catch(e){const m=errMsg(e);r.textContent=/capri_api|PGRST202|function|schema cache/i.test(m+(e&&e.code))?(LOCAL?'Non funziona: '+m:'Non ancora attivo: esegui prima il codice SQL su Supabase.'):'Non funziona: '+m;}};
   $('#ip-regen').onclick=async()=>{if(!confirm('La vecchia chiave smette di funzionare e dovrai ricopiare i due script. Continuare?'))return;
     try{tok=await newToken();toast('Nuova chiave creata: ricopia i due script','ok');}catch(e){toast('Errore: '+errMsg(e),'err');}};
 }
@@ -2062,20 +2088,23 @@ $('#menu-btn').onclick=()=>{
     <button class="btn" id="m-notif" type="button">${ico('bell')}Notifiche giornaliere</button>
     <button class="btn" id="m-ios" type="button">${ico('play')}Siri e widget iPhone</button>
     <button class="btn" id="m-sec" type="button">${ico('lock')}Sicurezza dell'account</button>
-    <div class="note-box"><b>Database sveglio</b><br><span id="m-beat-t">${esc(beatText())}</span><br><span class="mini">Supabase gratuito va in pausa dopo una settimana senza attività: Capri manda un segnale ogni ora e ogni volta che lo apri.</span>
-      <div style="margin-top:10px"><button class="btn sm" id="m-beat" type="button">${ico('refresh')}Manda un segnale adesso</button></div></div>
+    ${LOCAL?`<div class="note-box"><b>I tuoi dati sono a casa tua</b><br><span class="mini">Capri vive sul tuo dispositivo: nessun cloud. Ogni notte fa una copia di sicurezza<span id="m-bk-t"></span>.</span>
+      <div style="margin-top:10px"><button class="btn sm" id="m-bk" type="button">${ico('refresh')}Fai una copia adesso</button></div></div>`:`<div class="note-box"><b>Database sveglio</b><br><span id="m-beat-t">${esc(beatText())}</span><br><span class="mini">Supabase gratuito va in pausa dopo una settimana senza attività: Capri manda un segnale ogni ora e ogni volta che lo apri.</span>
+      <div style="margin-top:10px"><button class="btn sm" id="m-beat" type="button">${ico('refresh')}Manda un segnale adesso</button></div></div>`}
     <button class="btn" id="m-wake" type="button">${ico('logo')}<span>${'wakeLock' in navigator?(wakeWanted()?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)'):'Computer sempre sveglio: non supportato da questo browser'}</span></button>
     <button class="btn" id="m-exp" type="button">Scarica backup completo (file .json)</button>
     <label class="btn" style="cursor:pointer"><input type="file" accept=".json,application/json" hidden id="m-imp">Ripristina da un backup</label>
     <div class="note-box"><b>Installa come app</b><br>${ios?'In Safari tocca Condividi, poi “Aggiungi alla schermata Home”.':'Nel menu del browser (⋮) scegli “Installa app” o “Aggiungi a schermata Home”.'} Capri si aprirà a schermo intero con la sua icona.</div>
-    <div class="note-box">Gli allegati restano nel tuo archivio Supabase: il backup contiene ticket, wishlist, spese, abbonamenti, note, fogli e impostazioni.</div>
+    <div class="note-box">${LOCAL?'Il backup scaricato contiene ticket, wishlist, spese, abbonamenti, note, fogli e impostazioni; gli allegati sono nella copia notturna sul dispositivo.':'Gli allegati restano nel tuo archivio Supabase: il backup contiene ticket, wishlist, spese, abbonamenti, note, fogli e impostazioni.'}</div>
     <button class="btn danger" id="m-out" type="button">Esci</button>
   </div>`);
-  $('#m-name-ok').onclick=async()=>{const n=$('#m-name').value.trim();await put('config/main',{...cfg(),name:n});toast('Nome salvato','ok');renderOggi();};
+  $('#m-name-ok').onclick=async()=>{const n=$('#m-name').value.trim();await put('config/main',{...(S.cfg||{}),...cfg(),name:n});toast('Nome salvato','ok');renderOggi();};
   $('#m-notif').onclick=()=>{closeModal();notifModal();};
   $('#m-ios').onclick=()=>{closeModal();iphoneModal();};
   $('#m-sec').onclick=()=>{closeModal();securityModal();};
-  $('#m-beat').onclick=async()=>{const b=$('#m-beat');b.disabled=true;try{await beat();$('#m-beat-t').textContent=beatText();toast('Segnale inviato: Supabase resta attivo','ok');}catch(e){toast('Non riuscito: '+errMsg(e),'err');}b.disabled=false;};
+  if(LOCAL){fetch('api/stato',{cache:'no-store'}).then(r=>r.json()).then(j=>{const t=$('#m-bk-t');if(t&&j.backup)t.textContent=` in “${j.backup.dir.split('/').slice(-2).join('/')}”${j.backup.ultimo?' (ultima: '+j.backup.ultimo.split('-').reverse().join('/')+')':''}`;}).catch(()=>{});
+    $('#m-bk').onclick=async()=>{const b=$('#m-bk');b.disabled=true;try{const r=await fetch('api/backup',{method:'POST',headers:{'X-Capri':'1'}});if(!r.ok)throw new Error('errore '+r.status);toast('Copia di sicurezza fatta','ok');}catch(e){toast('Non riuscita: '+errMsg(e),'err');}b.disabled=false;};}
+  else $('#m-beat').onclick=async()=>{const b=$('#m-beat');b.disabled=true;try{await beat();$('#m-beat-t').textContent=beatText();toast('Segnale inviato: Supabase resta attivo','ok');}catch(e){toast('Non riuscito: '+errMsg(e),'err');}b.disabled=false;};
   $('#m-wake').onclick=async()=>{if(!('wakeLock' in navigator)){toast('Questo browser non lo supporta: usa Chrome, Edge o Safari aggiornati','err');return;}
     const on=!wakeWanted();try{localStorage.setItem('capri-wake',on?'1':'0');}catch(e){}if(on)await wakeOn();else await wakeOff();
     $('#m-wake span').textContent=on?'Computer sempre sveglio: attivo (tocca per spegnere)':'Computer sempre sveglio: spento (tocca per attivare)';toast(on?(wakeActive()?'Il computer resterà sveglio finché Capri è aperto':'Attivo: parte appena Capri è in primo piano'):'Il computer può tornare in standby','ok');};
@@ -2131,7 +2160,7 @@ const gate=$('#gate');
 function gateShow(mode,msg){gate.hidden=false;$('#g-login').hidden=mode!=='login';$('#g-mfa').hidden=mode!=='mfa';if(mode==='mfa')setTimeout(()=>$('#g-code').focus(),50);$('#g-setup').hidden=mode!=='setup';$('#g-msg').textContent=msg||'';$('#g-msg').hidden=!msg;}
 function getCfg(){
   const c=window.CAPRI_CONFIG||{};
-  if(c.url&&c.key)return c;
+  if(c.local||(c.url&&c.key))return c;
   try{const j=JSON.parse(localStorage.getItem('capri-config')||'null');if(j&&j.url&&j.key)return j;}catch(e){}
   return null;
 }
@@ -2159,7 +2188,7 @@ $('#g-mfa').addEventListener('submit',async e=>{
   b.disabled=false;b.textContent='Verifica';
 });
 /* Face ID / impronta: passkey di Supabase (le chiavi restano nel portachiavi del telefono) */
-const pkSupported=()=>!!(window.PublicKeyCredential&&navigator.credentials&&navigator.credentials.get);
+const pkSupported=()=>!LOCAL&&!!(window.PublicKeyCredential&&navigator.credentials&&navigator.credentials.get);
 const pkHere=()=>{try{return localStorage.getItem('capri-passkey')==='1';}catch(e){return false;}};
 const pkName=()=>isIOS?(/ipad/i.test(navigator.userAgent)||navigator.maxTouchPoints>1&&!/iphone/i.test(navigator.userAgent)?'iPad':'iPhone'):/mac/i.test(navigator.platform||'')?'Mac':/android/i.test(navigator.userAgent)?'Android':/win/i.test(navigator.platform||'')?'PC Windows':'Browser';
 const pkErr=e=>{const m=errMsg(e);return/NotAllowed|abort|cancel/i.test((e&&e.name)||'')||/NotAllowed|aborted|cancel/i.test(m)?'':/disabled|not enabled|passkey.*(off|not)|404|not found/i.test(m)?'L\'accesso con Face ID non è ancora attivo su Supabase (Authentication → Passkeys).':m;};
@@ -2177,12 +2206,19 @@ async function start(session){
   S.loaded={t:1,w:1,s:1};S.ready=true;renderOggi();renderNotes();renderDiary();if(S.view==='finanze')renderFin();
   addWeekly().catch(()=>{});
   mUI();if(S.view==='musica'){muLoadLib();renderMusic();}else if(muHost())muLoadLib();
-  {const h=lastBeat();if(!h||Date.now()-h.at>6*3600e3)beat().catch(()=>{});}
+  if(!LOCAL){const h=lastBeat();if(!h||Date.now()-h.at>6*3600e3)beat().catch(()=>{});}
+  movedBanner();
   try{SB.channel('docs-'+UID).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'user_id=eq.'+UID},onRealtime).subscribe();}catch(e){}
   let lastLoad=Date.now();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastLoad>20000&&!pendN&&!dirty.size&&!S.ed){lastLoad=Date.now();loadAll().catch(()=>{});}});
   setTimeout(()=>{if(!autoRan){autoRan=true;autoPrices(false);}},1200);
 }
+/* Dopo il trasloco sul tablet il vecchio sito avvisa dove si trova Capri adesso */
+function movedBanner(){const m=!LOCAL&&(S.cfg||{}).migratedLocal;if(!m||$('#moved'))return;
+  const d=document.createElement('div');d.id='moved';d.className='note-box';
+  d.style.cssText='position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:90;max-width:min(560px,calc(100vw - 24px));border-color:#3dff9a;box-shadow:0 0 24px rgba(61,255,154,.25)';
+  d.innerHTML=`<b>Capri ora vive sul tuo tablet</b><br><span class="mini">Questa è la vecchia copia nel cloud e non si aggiorna più. ${m.url?`Apri <a href="${esc(m.url)}">${esc(m.url.replace(/^https:\/\//,''))}</a> (con Tailscale acceso).`:'Apri il nuovo indirizzo con Tailscale acceso.'}</span>`;
+  document.body.appendChild(d);}
 function showErr(e){
   const code=(e&&e.code)||'',msg=errMsg(e);let hint='';
   if(code==='42P01'||code==='PGRST205'||/does not exist|schema cache/i.test(msg))hint='La tabella dei dati non esiste: esegui il file setup.sql nel SQL Editor di Supabase.';
@@ -2206,8 +2242,9 @@ async function loginAt(){const v=await authStorage.getItem('capri-login-at');ret
 async function boot(){
   const C=getCfg();
   if(!C){gateShow('setup','');return;}
-  if(!window.supabase||!window.supabase.createClient){gateShow('',"Non riesco a caricare i componenti di Capri: controlla la connessione e ricarica la pagina.");return;}
-  SB=window.supabase.createClient(C.url,C.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'capri-auth',storage:authStorage,experimental:{passkey:true}}});
+  if(LOCAL)SB=window.CapriLocal.createClient();
+  else{if(!window.supabase||!window.supabase.createClient){gateShow('',"Non riesco a caricare i componenti di Capri: controlla la connessione e ricarica la pagina.");return;}
+  SB=window.supabase.createClient(C.url,C.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'capri-auth',storage:authStorage,experimental:{passkey:true}}});}
   let session=null;
   for(let i=0;i<3&&!session;i++){try{const{data,error}=await SB.auth.getSession();session=data&&data.session;if(!session&&!error)break;}catch(e){}if(!session)await sleep(1200);}
   if(session){
